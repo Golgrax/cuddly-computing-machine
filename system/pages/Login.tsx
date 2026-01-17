@@ -199,7 +199,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                     {isSignup && (
                       <div className="space-y-2 md:space-y-3">
-                        <label className="block text-sm md:text-lg font-black uppercase tracking-[0.2em] text-white/40 ml-3">Legal Name</label>
+                        <label className="block text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white/40 ml-3">Legal Name</label>
                         <div className="relative flex items-center">
                           <UserIcon className="absolute left-6 text-white/20" size={20} />
                           <input
@@ -212,7 +212,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     )}
 
                     <div className="space-y-2 md:space-y-3">
-                      <label className="block text-sm md:text-lg font-black uppercase tracking-[0.2em] text-white/40 ml-3">System Email</label>
+                      <label className="block text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white/40 ml-3">System Email</label>
                       <div className="relative flex items-center">
                         <Mail className="absolute left-6 text-white/20" size={20} />
                         <input
@@ -225,8 +225,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                     <div className="space-y-2 md:space-y-3">
                       <div className="flex justify-between items-center px-3">
-                        <label className="block text-sm md:text-lg font-black uppercase tracking-[0.2em] text-white/40">Security Key</label>
-                        <Link to="/forgot-password" title="Recover Account" className="text-xs md:text-base font-black uppercase text-school-gold tracking-widest opacity-60 hover:opacity-100">Forgot?</Link>
+                        <label className="block text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white/40">Security Key</label>
+                        <Link to="/forgot-password" title="Recover Account" className="text-[11px] md:text-xs font-black uppercase text-school-gold tracking-widest opacity-60 hover:opacity-100">Forgot?</Link>
                       </div>
                       <div className="relative flex items-center">
                         <Key className="absolute left-6 text-white/20" size={20} />
@@ -240,7 +240,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
                     <button
                       disabled={isLoading}
-                      className="w-full bg-white text-slate-900 font-black py-4 md:py-6 rounded-[2rem] hover:bg-school-gold hover:text-school-navy transition-all flex items-center justify-center gap-4 group uppercase tracking-[0.2em] text-[10px] md:text-xs shadow-2xl disabled:opacity-50"
+                      className="w-full bg-white text-slate-900 font-black py-4 md:py-6 rounded-[2rem] hover:bg-school-gold hover:text-school-navy transition-all flex items-center justify-center gap-4 group uppercase tracking-[0.2em] text-sm md:text-lg shadow-2xl disabled:opacity-50"
                     >
                       {isLoading ? 'Processing...' : isSignup ? 'Create Profile' : 'Authenticate Device'}
                       {!isLoading && <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />}
@@ -250,7 +250,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       <button
                         type="button"
                         onClick={() => { setIsSignup(!isSignup); setError(''); }}
-                        className="text-sm md:text-lg font-black uppercase tracking-[0.3em] text-white/30 hover:text-school-gold transition-colors"
+                        className="text-xs md:text-sm font-black uppercase tracking-[0.3em] text-white/30 hover:text-school-gold transition-colors"
                       >
                         {isSignup ? 'Already registered? Login' : 'No account? Create profile'}
                       </button>

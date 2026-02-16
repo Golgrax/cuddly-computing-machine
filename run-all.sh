@@ -11,6 +11,18 @@ trap cleanup SIGINT SIGTERM EXIT
 
 echo "--- 🚀 STARTING STO. NIÑO PORTAL MULTI-SYSTEM ---"
 
+# --- INSTALLATION CHECK ---
+if [ ! -d "node_modules" ] || [ ! -d "system/node_modules" ] || [ ! -d "system1/node_modules" ] || [ ! -d "system2/backend/node_modules" ] || [ "$1" == "--install" ]; then
+    echo "📦 [Setup] Missing dependencies or --install flag detected."
+    echo "📦 [Setup] Installing all dependencies for all systems (this may take a minute)..."
+    npm install
+    if [ $? -ne 0 ]; then
+        echo "❌ [Setup] Installation failed! Please run 'npm install' manually."
+        exit 1
+    fi
+    echo "✅ [Setup] All dependencies installed successfully."
+fi
+
 # --- MAIN SYSTEM ---
 echo "[Main] Starting Backend (Port 3001)..."
 cd system/backend

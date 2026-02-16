@@ -14,9 +14,14 @@ echo "--- 🚀 STARTING STO. NIÑO PORTAL MULTI-SYSTEM ---"
 # --- INSTALLATION CHECK ---
 install_if_missing() {
     local dir=$1
-    if [ ! -d "$dir/node_modules" ] || [ "$2" == "--install" ]; then
-        echo "📦 [Setup] Installing dependencies in $dir..."
-        (cd "$dir" && npm install)
+    local force=$2
+    # Check for a key dependency to verify node_modules is actually populated
+    local check_mod="express"
+    if [[ "$dir" == *"system2/backend"* ]]; then check_mod="cors"; fi
+    
+    if [ ! -d "$dir/node_modules/$check_mod" ] || [ "$force" == "true" ]; then
+        echo "📦 [Setup] Installing/Fixing dependencies in $dir..."
+        (cd "$dir" && npm install --no-audit --no-fund)
         if [ $? -ne 0 ]; then
             echo "❌ [Setup] Failed to install dependencies in $dir"
             return 1
@@ -25,10 +30,15 @@ install_if_missing() {
     return 0
 }
 
-FORCE_INSTALL=""
-if [ "$1" == "--install" ]; then FORCE_INSTALL="--install"; fi
+FORCE_INSTALL="false"
+if [ "$1" == "--install" ]; then FORCE_INSTALL="true"; fi
+if [ "$1" == "--clean" ]; then
+    echo "🧹 [Setup] Cleaning old node_modules..."
+    find . -name "node_modules" -type d -prune -exec rm -rf '{}' +
+    FORCE_INSTALL="true"
+fi
 
-echo "🔍 [Setup] Checking dependencies..."
+echo "🔍 [Setup] Verifying system integrity..."
 install_if_missing "." "$FORCE_INSTALL" || exit 1
 install_if_missing "system" "$FORCE_INSTALL" || exit 1
 install_if_missing "system1" "$FORCE_INSTALL" || exit 1

@@ -12,16 +12,29 @@ trap cleanup SIGINT SIGTERM EXIT
 echo "--- 🚀 STARTING STO. NIÑO PORTAL MULTI-SYSTEM ---"
 
 # --- INSTALLATION CHECK ---
-if [ ! -d "node_modules" ] || [ ! -d "system/node_modules" ] || [ ! -d "system1/node_modules" ] || [ ! -d "system2/backend/node_modules" ] || [ "$1" == "--install" ]; then
-    echo "📦 [Setup] Missing dependencies or --install flag detected."
-    echo "📦 [Setup] Installing all dependencies for all systems (this may take a minute)..."
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "❌ [Setup] Installation failed! Please run 'npm install' manually."
-        exit 1
+install_if_missing() {
+    local dir=$1
+    if [ ! -d "$dir/node_modules" ] || [ "$2" == "--install" ]; then
+        echo "📦 [Setup] Installing dependencies in $dir..."
+        (cd "$dir" && npm install)
+        if [ $? -ne 0 ]; then
+            echo "❌ [Setup] Failed to install dependencies in $dir"
+            return 1
+        fi
     fi
-    echo "✅ [Setup] All dependencies installed successfully."
-fi
+    return 0
+}
+
+FORCE_INSTALL=""
+if [ "$1" == "--install" ]; then FORCE_INSTALL="--install"; fi
+
+echo "🔍 [Setup] Checking dependencies..."
+install_if_missing "." "$FORCE_INSTALL" || exit 1
+install_if_missing "system" "$FORCE_INSTALL" || exit 1
+install_if_missing "system1" "$FORCE_INSTALL" || exit 1
+install_if_missing "system2" "$FORCE_INSTALL" || exit 1
+install_if_missing "system2/backend" "$FORCE_INSTALL" || exit 1
+echo "✅ [Setup] Dependency check complete."
 
 # --- MAIN SYSTEM ---
 echo "[Main] Starting Backend (Port 3001)..."

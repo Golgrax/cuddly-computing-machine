@@ -18,8 +18,21 @@
           colors: {
             school: {
               gold: '#D4AF37',
-              navy: '#1A237E',
-              accent: '#6366f1'
+              navy: 'var(--school-navy, #1A237E)',
+              accent: 'var(--school-accent, #6366f1)'
+            },
+            indigo: {
+              50: 'var(--theme-50, #eff6ff)',
+              100: 'var(--theme-100, #e0e7ff)',
+              200: 'var(--theme-200, #c7d2fe)',
+              300: 'var(--theme-300, #a5b4fc)',
+              400: 'var(--theme-400, #818cf8)',
+              500: 'var(--theme-500, #6366f1)',
+              600: 'var(--theme-600, #4f46e5)',
+              700: 'var(--theme-700, #4338ca)',
+              800: 'var(--theme-800, #3730a3)',
+              900: 'var(--theme-900, #312e81)',
+              950: 'var(--theme-950, #1e1b4b)',
             },
             surface: {
               light: '#f8fafc',
@@ -98,7 +111,7 @@
 
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--school-accent, #6366f1); border-radius: 10px; }
 
     .animate-float {
       animation: float 6s ease-in-out infinite;

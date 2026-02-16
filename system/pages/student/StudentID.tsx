@@ -145,7 +145,7 @@ const StudentID: React.FC<{ user: User }> = ({ user }) => {
                 onClick={() => setShowBack(!showBack)}
                 className="px-10 py-5 bg-white text-school-navy border-2 border-slate-100 rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-slate-50 hover:border-slate-200 transition-all hover:-translate-y-1 active:translate-y-0"
             >
-                <UserCheck size={20} /> Flip to {showBack ? 'Back' : 'Front'}
+                <UserCheck size={20} /> Flip to {showBack ? 'Front' : 'Back'}
             </button>
             <button 
                 onClick={handleDownload}

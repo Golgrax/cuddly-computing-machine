@@ -199,7 +199,7 @@ const Sidebar: React.FC<{ user: User, isOpen: boolean, onClose: () => void, onLo
              <Link to="/profile" onClick={onClose} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mb-4 cursor-pointer group hover:bg-slate-100 transition-all">
                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center font-black text-indigo-600 relative overflow-hidden">
                  <img 
-                    src={user.avatar ? (user.avatar.startsWith('http') ? user.avatar : user.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1A237E&color=fff`} 
+                    src={user.avatar ? (user.avatar.startsWith('http') ? user.avatar : user.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=${(user.role === UserRole.TEACHER || user.role === UserRole.FACULTY) ? '9f1239' : user.role === UserRole.ADMIN ? '1e293b' : user.role === UserRole.TRANSFEREE ? '064e3b' : '1A237E'}&color=fff`} 
                     className="w-full h-full object-cover" 
                     alt="PFP"
                  />
@@ -302,6 +302,47 @@ const App: React.FC = () => {
   const setPrefs = (p: Partial<UIPreferences>) => setPrefsState(prev => ({ ...prev, ...p }));
   const handleLogin = (u: User) => { setUser(u); localStorage.setItem('school_user', JSON.stringify(u)); };
   const handleLogout = () => { localStorage.removeItem('school_user'); setUser(null); };
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const role = user?.role || UserRole.STUDENT;
+    
+    const themes = {
+      [UserRole.STUDENT]: {
+        navy: '#1A237E', accent: '#6366f1',
+        50: '#eff6ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+      },
+      [UserRole.TEACHER]: {
+        navy: '#9f1239', accent: '#f43f5e',
+        50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337', 950: '#4c0519'
+      },
+      [UserRole.FACULTY]: {
+        navy: '#9f1239', accent: '#f43f5e',
+        50: '#fff1f2', 100: '#ffe4e6', 200: '#fecdd3', 300: '#fda4af', 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c', 800: '#9f1239', 900: '#881337', 950: '#4c0519'
+      },
+      [UserRole.ADMIN]: {
+        navy: '#1e293b', accent: '#64748b',
+        50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617'
+      },
+      [UserRole.TRANSFEREE]: {
+        navy: '#064e3b', accent: '#10b981',
+        50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b', 950: '#022c22'
+      },
+      [UserRole.PENDING]: {
+        navy: '#1A237E', accent: '#6366f1',
+        50: '#eff6ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b'
+      }
+    };
+
+    const theme = themes[role] || themes[UserRole.STUDENT];
+    root.style.setProperty('--school-navy', theme.navy);
+    root.style.setProperty('--school-accent', theme.accent);
+    Object.entries(theme).forEach(([key, value]) => {
+      if (key !== 'navy' && key !== 'accent') {
+        root.style.setProperty(`--theme-${key}`, value as string);
+      }
+    });
+  }, [user?.role]);
 
   if (isSessionLoading) return <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
 

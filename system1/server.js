@@ -80,11 +80,11 @@ app.post('/api/generate-id', async (req, res) => {
     <rect x="75" y="240" width="265" height="265" fill="none" stroke="black" stroke-width="2" />
 
     <!-- QR Code -->
-    <image x="375" y="240" width="200" height="200" href="${escapeXml(qrDataUrl)}" />
+    <image x="365" y="240" width="200" height="200" href="${escapeXml(qrDataUrl)}" />
     
     <!-- LRN Background -->
-    <rect x="375" y="440" width="200" height="30" fill="white" />
-    <text x="475" y="465" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000000" text-anchor="middle">${escapeXml(user.lrn || '123456789012')}</text>
+    <rect x="365" y="440" width="200" height="30" fill="white" />
+    <text x="465" y="465" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000000" text-anchor="middle">${escapeXml(user.lrn || '123456789012')}</text>
 
     <!-- Learner's Name -->
     <rect x="90" y="525" width="455" height="50" fill="white" />
@@ -99,8 +99,9 @@ app.post('/api/generate-id', async (req, res) => {
     <text x="95" y="765" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#000000" text-anchor="start">${escapeXml((user.adviser || 'Jane De Castro').toUpperCase())}</text>
     
     <!-- School Year -->
-    <rect x="200" y="935" width="240" height="50" fill="#1e3a8a" /> 
-    <text x="${width/2}" y="975" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#ffffff" text-anchor="middle">${escapeXml(user.schoolYear || '2025-2026')}</text>
+    <rect x="200" y="895" width="240" height="95" fill="#1e3a8a" rx="10" /> 
+    <text x="${width/2}" y="930" font-family="Arial, sans-serif" font-size="20" font-weight="900" fill="#ffffff" text-anchor="middle" style="letter-spacing: 2px;">SCHOOL YEAR</text>
+    <text x="${width/2}" y="975" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#ffffff" text-anchor="middle">${escapeXml(user.schoolYear || '2025-2026')}</text>
 </svg>`;
             res.setHeader('Content-Type', 'image/svg+xml');
             return res.send(svg.trim());
@@ -112,8 +113,8 @@ app.post('/api/generate-id', async (req, res) => {
     <image width="${width}" height="${height}" href="${escapeXml(bgBase64)}" />
     
     <!-- Parent/Guardian Name -->
-    <rect x="90" y="335" width="455" height="50" fill="white" />
-    <text x="95" y="375" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#000000" text-anchor="start">${escapeXml((user.guardianName || 'Sophia L. Dela Cruz').toUpperCase())}</text>
+    <rect x="90" y="335.5" width="455" height="50" fill="white" />
+    <text x="95" y="375.5" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#000000" text-anchor="start">${escapeXml((user.guardianName || 'Sophia L. Dela Cruz').toUpperCase())}</text>
     
     <!-- Contact Number -->
     <rect x="90" y="435" width="455" height="50" fill="white" />

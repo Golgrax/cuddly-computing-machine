@@ -79,7 +79,16 @@ const ProfilePage: React.FC<{ user: User, onUpdateUser: (u: User) => void }> = (
   } catch (e) { console.error("Failed to parse requirements", e); }
 
   // Append timestamp to force refresh if avatar exists
-  const pfpRaw = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1A237E&color=fff&size=512`;
+  const getRoleNavyHex = () => {
+    switch (user.role) {
+      case UserRole.TEACHER:
+      case UserRole.FACULTY: return '9f1239';
+      case UserRole.ADMIN: return '1e293b';
+      default: return '1A237E';
+    }
+  };
+
+  const pfpRaw = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=${getRoleNavyHex()}&color=fff&size=512`;
   const pfp = user.avatar ? `${pfpRaw}?t=${Date.now()}` : pfpRaw;
 
   return (
@@ -97,7 +106,7 @@ const ProfilePage: React.FC<{ user: User, onUpdateUser: (u: User) => void }> = (
       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[3.5rem] overflow-hidden shadow-2xl">
          <div className={`h-40 bg-gradient-to-r relative ${
             user.role === UserRole.ADMIN ? 'from-slate-700 via-slate-800 to-slate-950' :
-            user.role === UserRole.TEACHER ? 'from-rose-700 via-rose-800 to-rose-950' :
+            (user.role === UserRole.TEACHER || user.role === UserRole.FACULTY) ? 'from-rose-700 via-rose-800 to-rose-950' :
             'from-school-navy via-indigo-900 to-slate-900'
          }`}>
             <div className="absolute -bottom-16 left-12">
@@ -286,7 +295,7 @@ const ProfilePage: React.FC<{ user: User, onUpdateUser: (u: User) => void }> = (
                 <QRCode 
                   value={qrHash} 
                   size={140} 
-                  fgColor="#1A237E" 
+                  fgColor={`#${getRoleNavyHex()}`} 
                   bgColor="#FFFFFF"
                   level="H"
                 />

@@ -16,9 +16,20 @@ import {
 } from 'recharts';
 
 const LOGO_URL = "https://raw.githubusercontent.com/Golgrax/randompublicimagefreetouse/refs/heads/main/logo.png";
-const CHART_COLORS = ['#1A237E', '#00A36C', '#EAB308', '#E11D48', '#6366F1', '#8B5CF6'];
 
 const Dashboard: React.FC<{ user: User }> = ({ user }) => {
+  const getRoleColorHex = () => {
+    switch (user.role) {
+      case UserRole.TEACHER:
+      case UserRole.FACULTY: return '#e11d48'; // rose-600
+      case UserRole.ADMIN: return '#475569'; // slate-600
+      case UserRole.TRANSFEREE: return '#059669'; // emerald-600
+      default: return '#1A237E'; // school-navy
+    }
+  };
+
+  const CHART_COLORS = [getRoleColorHex(), '#00A36C', '#EAB308', '#E11D48', '#6366F1', '#8B5CF6'];
+
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,7 +250,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                           cursor={{ fill: '#f8fafc' }}
                           contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
                         />
-                        <Bar dataKey="value" fill="#6366F1" radius={[10, 10, 0, 0]} barSize={40} />
+                        <Bar dataKey="value" fill={getRoleColorHex()} radius={[10, 10, 0, 0]} barSize={40} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -255,8 +266,8 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                       <AreaChart data={stats.activityData}>
                         <defs>
                           <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
+                            <stop offset="5%" stopColor={getRoleColorHex()} stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor={getRoleColorHex()} stopOpacity={0}/>
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -265,7 +276,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
                         <Tooltip 
                           contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
                         />
-                        <Area type="monotone" dataKey="value" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                        <Area type="monotone" dataKey="value" stroke={getRoleColorHex()} strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, AttendanceRecord } from '../../types';
 import { api } from '../../src/api';
-import { CheckCircle, XCircle, Clock, Calendar, BarChart, Trophy, Info } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Calendar, BarChart as BarChartIcon, Trophy, Info, Sparkles, Activity } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -18,6 +19,14 @@ const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
   }, [user.id]);
 
   if (loading) return null;
+
+  // Process data for Chart
+  const chartData = attendance
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((record, index) => ({
+      name: `Day ${index + 1}`,
+      present: attendance.slice(0, index + 1).filter(r => r.status === 'present').length,
+    }));
 
   // Calculate Summary
   const totalPresent = attendance.filter(a => a.status === 'present').length;
@@ -59,29 +68,55 @@ const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
         <div className="lg:col-span-1 space-y-6">
            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[3rem] p-10 shadow-sm">
              <h3 className="text-lg font-black mb-8 flex items-center gap-2">Summary</h3>
-             <div className="space-y-6">
+             <div className="space-y-8">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-400">Total Present</span>
-                  <span className="text-xl font-black text-emerald-500">{totalPresent}</span>
+                  <span className="text-base font-black uppercase tracking-widest text-slate-400">Total Present</span>
+                  <span className="text-3xl font-black text-emerald-500">{totalPresent}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-400">Late Days</span>
-                  <span className="text-xl font-black text-amber-500">{totalLate}</span>
+                  <span className="text-base font-black uppercase tracking-widest text-slate-400">Late Days</span>
+                  <span className="text-3xl font-black text-amber-500">{totalLate}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-400">Absent/Excused</span>
-                  <span className="text-xl font-black text-indigo-500">{totalAbsent}</span>
+                  <span className="text-base font-black uppercase tracking-widest text-slate-400">Absent/Excused</span>
+                  <span className="text-3xl font-black text-indigo-500">{totalAbsent}</span>
                 </div>
              </div>
            </div>
 
-           <div className="bg-amber-50 dark:bg-amber-900/20 p-8 rounded-[2.5rem] border border-amber-100 dark:border-amber-800">
-              <div className="flex items-start gap-4">
-                <Info size={20} className="text-amber-600 flex-shrink-0" />
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 leading-relaxed">
-                  A perfect attendance rate of 100% at the end of the quarter qualifies you for the "Excellent Punctuality Award."
-                </p>
+           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[3rem] p-10 shadow-sm overflow-hidden group">
+              <div className="flex items-center justify-between mb-8">
+                <h4 className="text-sm font-black uppercase tracking-widest flex items-center gap-2 text-slate-400">
+                  <Activity size={16} className="text-indigo-600" /> Presence Growth
+                </h4>
+                <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase">Live Data</div>
               </div>
+              
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorAtt" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="present" 
+                      stroke="#4f46e5" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#colorAtt)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 mt-6 text-center uppercase tracking-widest">Cumulative Attendance Volume</p>
            </div>
         </div>
 
@@ -93,7 +128,7 @@ const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
                     {Array.from({ length: 31 }).map((_, i) => (
                       <div 
                         key={i} 
-                        className={`aspect-square rounded-2xl flex items-center justify-center text-[10px] font-black transition-all ${getStatusColor(i + 1)}`}
+                        className={`aspect-square rounded-2xl flex items-center justify-center text-xl font-black transition-all ${getStatusColor(i + 1)}`}
                       >
                         {i + 1}
                       </div>
@@ -107,16 +142,16 @@ const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
              
              <div className="mt-12 flex flex-wrap gap-8 pt-8 border-t border-slate-50 dark:border-slate-800">
                 <div className="flex items-center gap-3">
-                   <div className="w-4 h-4 rounded-full bg-emerald-500" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Present</span>
+                   <div className="w-5 h-5 rounded-full bg-emerald-500" />
+                   <span className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Present</span>
                 </div>
                 <div className="flex items-center gap-3">
-                   <div className="w-4 h-4 rounded-full bg-amber-400" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Late</span>
+                   <div className="w-5 h-5 rounded-full bg-amber-400" />
+                   <span className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Late</span>
                 </div>
                 <div className="flex items-center gap-3">
-                   <div className="w-4 h-4 rounded-full bg-rose-500" />
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Absent</span>
+                   <div className="w-5 h-5 rounded-full bg-rose-500" />
+                   <span className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Absent</span>
                 </div>
              </div>
            </div>

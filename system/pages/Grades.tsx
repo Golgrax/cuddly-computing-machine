@@ -58,21 +58,10 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
       setPreviewLoading(true);
       setIsPreviewing(true);
       try {
-          const userData = {
-            name: user.name,
-            age: calculateAge(user.birthDate),
-            sex: user.sex || 'MALE', 
-            lrn: user.lrn || 'N/A',
-            grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
-            section: (user.section || 'N/A').toUpperCase(),
-            schoolYear: user.schoolYear || 'N/A',
-            gwa: user.gwa || 'N/A'
-          };
-
           const response = await fetch('/system2-api/api/generate-pdf', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userData, grades, attendance })
+              body: JSON.stringify({ studentId: user.id })
           });
           
           if (!response.ok) throw new Error("Failed to generate preview");
@@ -93,21 +82,25 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const gradesData = await api.getGrades(user.role === UserRole.STUDENT ? user.id : '');
+      const studentId = user.role === UserRole.STUDENT ? user.id : '';
+      console.log(`[DEBUG] Loading grades for studentId: "${studentId}" (Role: ${user.role})`);
+      const gradesData = await api.getGrades(studentId);
+      console.log(`[DEBUG] Grades API response:`, gradesData);
       setGrades(gradesData);
 
       if (user.role === UserRole.STUDENT) {
+        console.log(`[DEBUG] Loading attendance for user.id: "${user.id}"`);
         const attData = await api.getAttendance(user.id);
+        console.log(`[DEBUG] Attendance API response:`, attData);
         setAttendance(attData);
       }
 
       if (isFaculty) {
-        const allStudents = await api.getUsers(); // Assuming this fetches all users, including students
+        const allStudents = await api.getUsers(); 
         setStudents(allStudents.filter(u => u.role === UserRole.STUDENT));
       }
     } catch (error) {
       console.error("Failed to load grades or students:", error);
-      // Handle error, e.g., show a message to the user
     }
     setLoading(false);
   };
@@ -290,7 +283,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
           <p className="text-slate-500 mt-2 font-medium">Official Elementary Progress Report Card (Form 138).</p>
         </div>
         <div className="flex gap-3">
-          {isFaculty && (
+          {isFaculty ? (
             <>
               <input 
                 type="file" 
@@ -319,262 +312,214 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                 <PlusCircle size={16} /> Add Grade
               </button>
             </>
+          ) : (
+            <div className="flex gap-2">
+                <button 
+                onClick={() => fetchPreview()}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg hover:opacity-90 transition-all"
+                >
+                <FileText size={16} /> Preview SF9
+                </button>
+                <button 
+                onClick={async () => {
+                    try {
+                    setToast('Preparing PDF...');
+                    const response = await fetch('/system2-api/api/generate-pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ studentId: user.id })
+                    });
+
+                    if (!response.ok) throw new Error('Generation failed');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `SF9_${user.name.replace(/\s+/g, '_')}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setToast('PDF Downloaded!');
+                    setTimeout(() => setToast(null), 2000);
+                    } catch (err) {
+                    console.error(err);
+                    alert("Failed to download PDF.");
+                    }
+                }}
+                className="px-6 py-3 bg-rose-600 text-white rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg hover:opacity-90 transition-all"
+                >
+                <Download size={16} /> PDF
+                </button>
+            </div>
           )}
         </div>
       </div>
 
-
-      {user.role === UserRole.STUDENT ? (
-        <div className="flex justify-center">
-            <div className="p-10 border-2 border-dashed border-slate-300 rounded-3xl bg-slate-50 dark:bg-slate-800 text-center w-full max-w-4xl">
-                <p className="text-slate-400 font-bold mb-4">SF9 (Report Card)</p>
-                <div className="flex flex-col items-center gap-4">
-                  <FileText size={48} className="text-slate-300" />
-                  <p className="text-sm text-slate-500 max-w-md mx-auto">
-                    Download your official SF9 Report Card in Excel format. This file is formatted for printing and offline viewing.
-                  </p>
-                  <button 
-                    onClick={async () => {
-                      try {
-                        setToast('Preparing PDF...');
-                        const userData = {
-                          name: user.name,
-                          age: calculateAge(user.birthDate),
-                          sex: user.sex || 'MALE', 
-                          lrn: user.lrn || 'N/A',
-                          grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
-                          section: (user.section || 'N/A').toUpperCase(),
-                          schoolYear: user.schoolYear || 'N/A',
-                          gwa: user.gwa || 'N/A'
-                        };
-                        
-                        const response = await fetch('/system2-api/api/generate-pdf', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userData, grades, attendance })
-                        });
-
-                        if (!response.ok) {
-                          const errorText = await response.text();
-                          throw new Error(errorText || 'Generation failed');
-                        }
-
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `SF9_${user.name.replace(/\s+/g, '_')}.pdf`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        setToast('PDF Downloaded!');
-                        setTimeout(() => setToast(null), 2000);
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to download PDF.");
-                      }
-                    }}
-                    className="px-8 py-4 bg-rose-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-rose-700 transition-all hover:-translate-y-1"
-                  >
-                    <Download size={20} /> Download SF9 (PDF)
-                  </button>
-
-                  <button 
-                    onClick={async () => {
-                      try {
-                        const userData = {
-                          name: user.name,
-                          age: calculateAge(user.birthDate),
-                          sex: user.sex || 'MALE', 
-                          lrn: user.lrn || 'N/A',
-                          grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
-                          section: (user.section || 'N/A').toUpperCase(),
-                          schoolYear: user.schoolYear || 'N/A',
-                          gwa: user.gwa || 'N/A'
-                        };
-                        
-                        const response = await fetch('/system2-api/api/generate-excel', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userData, grades, attendance, role: 'student' })
-                        });
-
-                        if (!response.ok) throw new Error('Generation failed');
-
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `SF9_${user.name.replace(/\s+/g, '_')}_student.xlsx`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                      } catch (err) {
-                        console.error(err);
-                        alert("Failed to download SF9. Ensure System 2 backend is running.");
-                      }
-                    }}
-                    className="px-8 py-4 bg-emerald-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-emerald-700 transition-all hover:-translate-y-1"
-                  >
-                    <Download size={20} /> Download SF9 (XLSX)
-                  </button>
-
-                  <button 
-                    onClick={() => fetchPreview()}
-                    className="px-8 py-4 bg-indigo-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all hover:-translate-y-1"
-                  >
-                    <FileText size={20} /> Preview SF9
-                  </button>
+      {user.role === UserRole.STUDENT && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-indigo-600 rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-100 dark:shadow-none relative overflow-hidden group">
+                <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                    <Award size={160} />
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">General Average</p>
+                <h3 className="text-5xl font-black">{user.gwa || 'N/A'}</h3>
+                {user.honorStatus && (
+                    <div className="mt-6 flex items-center gap-2">
+                        <div className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-black uppercase tracking-widest">
+                            {user.honorStatus}
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-100/50 dark:shadow-none">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Attendance Rate</p>
+                <h3 className="text-5xl font-black text-slate-900 dark:text-white">{user.attendanceRate ? `${user.attendanceRate}%` : 'N/A'}</h3>
+                <div className="mt-6 w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                        style={{ width: `${user.attendanceRate || 0}%` }}
+                    />
                 </div>
             </div>
         </div>
-      ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject Areas</th>
-                  <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">1st</th>
-                  <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">2nd</th>
-                  <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">3rd</th>
-                  <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">4th</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Final</th>
-                  <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Remarks</th>
-                  {isFaculty && <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {grades.map(grade => {
-                  const isEditing = editingId === grade.id;
-                  return (
-                    <tr key={grade.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all">
-                      <td className="px-8 py-8">
-                         <p className="font-black text-slate-800 dark:text-slate-100 text-lg leading-none">
-                           {isEditing ? (
-                             <input 
-                               type="text" className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-sm"
-                               value={tempData.subject ?? grade.subject}
-                               onChange={e => setTempData({...tempData, subject: e.target.value})}
-                             />
-                           ) : grade.subject}
-                         </p>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">{isFaculty ? grade.studentName : 'Core Academic'}</p>
-                      </td>
-                      {[1, 2, 3, 4].map(q => {
-                        const field = `q${q}` as keyof Grade;
-                        const val = isEditing ? (tempData[field] ?? (grade[field] as number)) : (grade[field] as number);
-                        return (
-                          <td key={q} className="px-6 py-8">
-                            {isEditing ? (
-                              <input 
-                                type="number" className="w-16 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-center"
-                                value={val === 0 ? '' : val}
-                                onChange={e => setTempData({...tempData, [field]: parseInt(e.target.value) || 0})}
-                              />
-                            ) : (
-                              <span className={`font-black text-xl ${val === 0 ? 'text-slate-200' : 'text-slate-600'}`}>{val || '-'}</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="px-8 py-8">
-                         <div className="flex items-center gap-4">
-                           <span className="px-4 py-2 bg-indigo-600 text-white rounded-2xl font-black text-sm">{grade.finalAverage || '-'}</span>
-                         </div>
-                      </td>
-                      <td className="px-8 py-8 text-right">
-                         <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase border-2 ${
-                           grade.remarks === 'Passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
-                         }`}>
-                           {grade.remarks}
-                         </span>
-                      </td>
-                      {isFaculty && (
-                        <td className="px-8 py-8 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button 
-                              onClick={() => isEditing ? handleUpdateGrade(grade.id) : (setEditingId(grade.id), setTempData({}))}
-                              className={`p-3 rounded-2xl ${isEditing ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}
-                              title={isEditing ? "Save Changes" : "Edit Grade"}
-                            >
-                              {isEditing ? <Save size={18}/> : <Edit size={18}/>}
-                            </button>
-                                                      {!isEditing && (
-                                                        <>
-                                                          <button 
-                                                            onClick={async () => {
-                                                              try {
-                                                                // For faculty, we might need to fetch the specific student's attendance first
-                                                                // or just pass empty for now. But to be thorough:
-                                                                const studentAttendance = await api.getAttendance(grade.studentId);
-                                                                
-                                                                // Get student details for correct SF9 construction
-                                                                const student = students.find(s => s.id === grade.studentId);
-
-                                                                const userData = {
-                                                                  name: grade.studentName,
-                                                                  age: calculateAge(student?.birthDate),
-                                                                  sex: student?.sex || 'MALE', 
-                                                                  lrn: student?.lrn || 'N/A',
-                                                                                                     grade: (student?.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
-                                                                                                     section: (student?.section || 'N/A').toUpperCase(),
-                                                                                                     schoolYear: student?.schoolYear || 'N/A',
-                                                                                                     gwa: student?.gwa || 'N/A'
-                                                                                                   };                                                                
-                                                                // Filter grades for this student
-                                                                const studentGrades = grades.filter(g => g.studentId === grade.studentId);
-
-                                                                const response = await fetch('/system2-api/api/generate-excel', {
-                                                                  method: 'POST',
-                                                                  headers: { 'Content-Type': 'application/json' },
-                                                                  body: JSON.stringify({ 
-                                                                    userData, 
-                                                                    grades: studentGrades, 
-                                                                    attendance: studentAttendance, 
-                                                                    role: 'teacher' 
-                                                                  })
-                                                                });
-                            
-                                                                if (!response.ok) throw new Error('Generation failed');
-                            
-                                                                const blob = await response.blob();
-                                                                const url = window.URL.createObjectURL(blob);
-                                                                const a = document.createElement('a');
-                                                                a.href = url;
-                                                                a.download = `SF9_${grade.studentName.replace(/\s+/g, '_')}.xlsx`;
-                                                                document.body.appendChild(a);
-                                                                a.click();
-                                                                a.remove();
-                                                              } catch (err) {
-                                                                console.error(err);
-                                                                alert("Failed to download SF9. Ensure System 2 backend is running.");
-                                                              }
-                                                            }}
-                                                            className="p-3 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-2xl transition-all"
-                                                            title="Download SF9 (XLSX)"
-                                                          >
-                                                            <Download size={18} />
-                                                          </button>
-                                                          <button 
-                                                            onClick={() => handleDeleteGrade(grade.id)}
-                                                            className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
-                                                            title="Delete Grade"
-                                                          >
-                                                            <Trash2 size={18} />
-                                                          </button>
-                                                        </>
-                                                      )}                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
       )}
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[3rem] shadow-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject Areas</th>
+                <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">1st</th>
+                <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">2nd</th>
+                <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">3rd</th>
+                <th className="px-6 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">4th</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Final</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Remarks</th>
+                {isFaculty && <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {grades.length === 0 ? (
+                <tr>
+                  <td colSpan={isFaculty ? 8 : 7} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-full text-slate-300">
+                        <Award size={48} />
+                      </div>
+                      <p className="font-black text-slate-400 uppercase tracking-widest text-xs">No grades recorded yet.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : grades.map(grade => {
+                const isEditing = editingId === grade.id;
+                return (
+                  <tr key={grade.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all group">
+                    <td className="px-8 py-8">
+                       <p className="font-black text-slate-800 dark:text-slate-100 text-lg leading-none tracking-tighter">
+                         {isEditing ? (
+                           <input 
+                             type="text" className="w-full p-2 bg-slate-100 dark:bg-slate-800 rounded-xl font-black text-sm outline-none border-2 border-transparent focus:border-indigo-600 transition-all"
+                             value={tempData.subject ?? grade.subject}
+                             onChange={e => setTempData({...tempData, subject: e.target.value})}
+                           />
+                         ) : grade.subject}
+                       </p>
+                       <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-widest">{isFaculty ? grade.studentName : 'Core Academic Module'}</p>
+                    </td>
+                    {[1, 2, 3, 4].map(q => {
+                      const field = `q${q}` as keyof Grade;
+                      const val = isEditing ? (tempData[field] ?? (grade[field] as number)) : (grade[field] as number);
+                      return (
+                        <td key={q} className="px-6 py-8 text-center">
+                          {isEditing ? (
+                            <input 
+                              type="number" className="w-16 p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl font-black text-center outline-none border-2 border-transparent focus:border-indigo-600 transition-all"
+                              value={val === 0 ? '' : val}
+                              onChange={e => setTempData({...tempData, [field]: parseInt(e.target.value) || 0})}
+                            />
+                          ) : (
+                            <span className={`font-black text-2xl ${val === 0 ? 'text-slate-200' : 'text-slate-700 dark:text-slate-300'}`}>{val || '-'}</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="px-8 py-8 text-center">
+                       <div className="flex justify-center">
+                         <span className="px-5 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-100 dark:shadow-none">{grade.finalAverage || '-'}</span>
+                       </div>
+                    </td>
+                    <td className="px-8 py-8 text-right">
+                       <span className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase border-2 tracking-widest ${
+                         grade.remarks === 'Passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
+                       }`}>
+                         {grade.remarks}
+                       </span>
+                    </td>
+                    {isFaculty && (
+                      <td className="px-8 py-8 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => isEditing ? handleUpdateGrade(grade.id) : (setEditingId(grade.id), setTempData({}))}
+                            className={`p-3 rounded-2xl transition-all ${isEditing ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white'}`}
+                            title={isEditing ? "Save Changes" : "Edit Grade"}
+                          >
+                            {isEditing ? <Save size={18}/> : <Edit size={18}/>}
+                          </button>
+                                                    {!isEditing && (
+                                                      <>
+                                                        <button 
+                                                          onClick={async () => {
+                                                            try {
+                                                              const response = await fetch('/system2-api/api/generate-excel', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ 
+                                                                  studentId: grade.studentId,
+                                                                  role: 'teacher' 
+                                                                })
+                                                              });
+                          
+                                                              if (!response.ok) throw new Error('Generation failed');
+                          
+                                                              const blob = await response.blob();
+                                                              const url = window.URL.createObjectURL(blob);
+                                                              const a = document.createElement('a');
+                                                              a.href = url;
+                                                              a.download = `SF9_${grade.studentName.replace(/\s+/g, '_')}.xlsx`;
+                                                              document.body.appendChild(a);
+                                                              a.click();
+                                                              a.remove();
+                                                            } catch (err) {
+                                                              console.error(err);
+                                                              alert("Failed to download SF9.");
+                                                            }
+                                                          }}
+                                                          className="p-3 bg-slate-100 text-slate-400 hover:bg-emerald-600 hover:text-white rounded-2xl transition-all"
+                                                          title="Download SF9 (XLSX)"
+                                                        >
+                                                          <Download size={18} />
+                                                        </button>
+                                                        <button 
+                                                          onClick={() => handleDeleteGrade(grade.id)}
+                                                          className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                                                          title="Delete Grade"
+                                                        >
+                                                          <Trash2 size={18} />
+                                                        </button>
+                                                      </>
+                                                    )}                          </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
 
       {/* Preview Modal */}
       {isPreviewing && (

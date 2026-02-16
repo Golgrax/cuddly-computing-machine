@@ -141,9 +141,9 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <p className="text-xl font-medium opacity-80 leading-relaxed max-w-lg mb-10">
               {isAdminOrFaculty 
                 ? "Unified portal for DepEd record compliance and masterlist verification."
-                : user.role === UserRole.STUDENT && user.honorStatus !== 'None' ? 
-                  `Excellence recognized: You are tagged as ${user.honorStatus}. Keep inspiring!` : 
-                  "Empowering learners through integrity, honor, and quality education."
+                : user.role === UserRole.STUDENT && user.honorStatus ? 
+                  `Academic Status: ${user.honorStatus}` : 
+                  "Accessing official school records and academic progress."
               }
             </p>
             <div className="flex gap-4">

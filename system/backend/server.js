@@ -408,7 +408,15 @@ app.get('/api/grades', (req, res) => {
     let sql = 'SELECT * FROM grades';
     let params = [];
     if (studentId) { sql += ' WHERE studentId = ?'; params.push(studentId); }
-    db.all(sql, params, (err, rows) => { if (err) return res.status(500).json({message:"Error"}); res.json(rows); });
+    console.log(`[DEBUG] Executing Grades SQL: ${sql} with params:`, params);
+    db.all(sql, params, (err, rows) => { 
+        if (err) {
+            console.error("[ERROR] Grades query failed:", err);
+            return res.status(500).json({message:"Error"}); 
+        }
+        console.log(`[DEBUG] Found ${rows.length} grade records.`);
+        res.json(rows); 
+    });
 });
 app.post('/api/grades', (req, res) => {
     const d = req.body;

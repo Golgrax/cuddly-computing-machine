@@ -178,9 +178,9 @@ app.post('/api/users/:id/avatar', avatarUpload.single('avatar'), async (req, res
 
 // --- DB INIT & SEED ---
 const INITIAL_USERS = [
-  { id: 'u-admin', name: 'System Admin', email: 'admin@gmail.com', role: 'ADMIN', gradeLevel: 'Grade 1', section: 'Sampaguita', password: '123' },
-  { id: 'u-stu1', name: 'Juan Dela Cruz', email: 'student@gmail.com', role: 'STUDENT', lrn: '123456789012', gradeLevel: 'Grade 4', section: 'Narra', attendanceRate: 98, gwa: 92.5, honorStatus: 'With High Honors', is4Ps: true, phone: '09123456789', address: 'Brgy. Santo Niño, City', guardianName: 'Maria Dela Cruz', guardianPhone: '09171234567', psaStatus: 'Verified', feedingProgramStatus: 'Beneficiary', password: '123' },
-  { id: 'u-tea1', name: 'Teacher Rose', email: 'teacher@gmail.com', role: 'TEACHER', assignedSections: ['Sampaguita', 'Narra'], password: '123' }
+  { id: 'u-admin', name: 'System Admin', email: 'admin@gmail.com', role: 'ADMIN', gradeLevel: 'Grade 1', section: 'Sampaguita', password: '123', schoolYear: '2025-2026', birthDate: '1990-01-01' },
+  { id: 'u-stu1', name: 'Juan Dela Cruz', email: 'student@gmail.com', role: 'STUDENT', lrn: '123456789012', gradeLevel: 'Grade 4', section: 'Narra', attendanceRate: 98, gwa: 92.5, honorStatus: 'With High Honors', is4Ps: true, phone: '09123456789', address: 'Brgy. Santo Niño, City', guardianName: 'Maria Dela Cruz', guardianPhone: '09171234567', psaStatus: 'Verified', feedingProgramStatus: 'Beneficiary', password: '123', schoolYear: '2025-2026', birthDate: '2015-06-15' },
+  { id: 'u-tea1', name: 'Teacher Rose', email: 'teacher@gmail.com', role: 'TEACHER', assignedSections: ['Sampaguita', 'Narra'], password: '123', schoolYear: '2025-2026', birthDate: '1985-05-20' }
 ];
 const seedDatabase = () => {
     db.run("ALTER TABLE document_requests ADD COLUMN feedback TEXT", (err) => {

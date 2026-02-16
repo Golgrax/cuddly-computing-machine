@@ -11,6 +11,18 @@ trap cleanup SIGINT SIGTERM EXIT
 
 echo "--- 🚀 STARTING STO. NIÑO PORTAL MULTI-SYSTEM ---"
 
+# --- PORT CLEANUP ---
+echo "🧹 [Setup] Clearing previous processes on system ports..."
+for port in 3000 3001 3002 5001 5002; do
+    pid=$(lsof -t -i :$port)
+    if [ ! -z "$pid" ]; then
+        echo "Killing process $pid on port $port..."
+        kill -9 $pid > /dev/null 2>&1
+    fi
+done
+sleep 2 # Give OS time to release ports
+
+
 # --- INSTALLATION CHECK ---
 install_if_missing() {
     local dir=$1
@@ -70,9 +82,11 @@ cd ..
 
 # --- SYSTEM 2 (Excel Evolution / SF9) ---
 echo "[S2] Starting Backend (Port 5001)..."
-# Check if port is already in use
+# Force clear port 5001 to prevent EADDRINUSE
 if lsof -i :5001 > /dev/null 2>&1; then
-    echo "⚠️ [S2] Port 5001 is already in use. Attempting to proceed anyway..."
+    echo "⚠️ [S2] Port 5001 is in use. Clearing process..."
+    fuser -k 5001/tcp > /dev/null 2>&1
+    sleep 1
 fi
 
 cd system2/backend

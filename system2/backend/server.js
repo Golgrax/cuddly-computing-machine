@@ -3,140 +3,207 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs-extra');
-const cheerio = require('cheerio');
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const ExcelJS = require('exceljs');
+const cheerio = require('cheerio');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(cors());
-app.use(bodyParser.json());
-// Serve resources (images, etc.)
-app.use('/resources', express.static(path.join(__dirname, 'files/resources')));
+app.use(bodyParser.json({ limit: '10mb' }));
 
+const FILES_DIR = path.join(__dirname, 'files');
 const SAMPLE_EXCEL_PATH = path.join(__dirname, '../../samples/SF 9 REPORT CARD AUTOMATED (SY 2025-2026) GRADE 5(1)(1).xlsx');
+const SAMPLE_K12_PDF = path.join(__dirname, '../../sample/k12.pdf');
+const SAMPLE_INSIDE_PDF = path.join(__dirname, '../../sample/inside.pdf');
 
-console.log(`[S2-Backend] Checking for sample Excel at: ${SAMPLE_EXCEL_PATH}`);
-if (!fs.existsSync(SAMPLE_EXCEL_PATH)) {
-  console.error(`❌ [S2-Backend] ERROR: Sample Excel file not found at ${SAMPLE_EXCEL_PATH}`);
-  // We don't exit, but we warn loudly
-} else {
-  console.log(`✅ [S2-Backend] Sample Excel file found.`);
-}
+// Serve static resources
+app.use('/resources', express.static(path.join(FILES_DIR, 'resources')));
 
-// Helper to process page for HTML Preview
-async function getPreviewHtml(fileName, userData) {
-  const filePath = path.join(__dirname, 'files', fileName);
-  const cssPath = path.join(__dirname, 'files/resources/sheet.css');
-  
-  let html = await fs.readFile(filePath, 'utf8');
-  let css = '';
-  try { css = await fs.readFile(cssPath, 'utf8'); } catch(e) {}
-
-  const $ = cheerio.load(html);
-
-  // 1. Inject Data
-  const MAP = {
-    'Carlo Dela Cruz': userData.name,
-    '123456789012': userData.lrn,
-    '10': userData.age,
-    'MALE': userData.sex,
-    'FIVE': userData.grade,
-    'RIZAL': userData.section,
-    '2025-2026': userData.schoolYear || '2025-2026'
-  };
-
-  $('td, span, div').each((i, el) => {
-    let text = $(el).text().trim();
-    if (MAP[text]) $(el).text(MAP[text]);
-  });
-
-  // 2. Fix Images (Use absolute path /resources/...)
-  $('img').each((i, el) => {
-    let src = $(el).attr('src');
-    if (src && !src.startsWith('/') && !src.startsWith('data:')) {
-       // Assuming src is something like "resources/image.jpg" or just "image.jpg" inside resources in the original HTML structure logic
-       // The original file structure seems to have resources folder.
-       // We just prepend /resources/ + filename
-       $(el).attr('src', '/resources/' + path.basename(src));
+// --- HTML PROCESSING ---
+async function processHtmlForClient(htmlPath, userData, grades = [], attendance = []) {
+    const html = await fs.readFile(htmlPath, 'utf8');
+    const $ = cheerio.load(html);
+    $('link[href="resources/sheet.css"]').attr('href', '/system2-api/resources/sheet.css');
+    $('img').each(function() {
+        const src = $(this).attr('src');
+        if (src && src.startsWith('resources/')) $(this).attr('src', `/system2-api/resources/${src.replace('resources/', '')}`);
+    });
+    $('td').each(function() {
+        const t = $(this).text();
+        if (t.includes('Carlo Dela Cruz')) $(this).text(userData.name || '');
+        if (t.trim() === '10' && $(this).prev().text().includes('Age:')) $(this).text(userData.age || '');
+        if (t.includes('MALE')) $(this).text(userData.sex || 'MALE');
+        if (t.includes('123456789012')) $(this).text(userData.lrn || '');
+        if (t.trim() === 'FIVE') $(this).text(userData.grade || '');
+        if (t.trim() === 'RIZAL') $(this).text(userData.section || '');
+        if (t.includes('2025-2026')) $(this).text(userData.schoolYear || '');
+    });
+    const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+    const pRow = $('tr:contains("No. of days present")');
+    const aRow = $('tr:contains("No. of days absent")');
+    if (pRow.length) {
+        let tp = 0; let ta = 0;
+        months.forEach((m, idx) => {
+            const att = (attendance || []).filter(a => { const d = new Date(a.date); return d.toLocaleString('default', { month: 'long' }) === m; });
+            const p = att.filter(a => a.status === 'present').length;
+            const a = att.filter(a => a.status === 'absent' || a.status === 'excused').length;
+            pRow.find('td').eq(idx + 1).text(p.toString());
+            aRow.find('td').eq(idx + 1).text(a.toString());
+            tp += p; ta += a;
+        });
+        pRow.find('td').last().text(tp.toString());
+        aRow.find('td').last().text(ta.toString());
     }
-  });
-
-  // 3. Embed CSS (Safe for srcdoc)
-  $('link[rel="stylesheet"]').remove();
-  $('head').append(`<style>${css}</style>`);
-  
-  // 4. Ensure white background and hide sheet headers
-  $('head').append(`
-    <style>
-      body { background: white; margin: 0; padding: 0; }
-      .row-headers-background, .column-headers-background, thead { display: none !important; }
-      .row-header-wrapper { display: none !important; }
-    </style>
-  `);
-
-  return $.html();
+    const subj = { 'Filipino': 'Filipino', 'English': 'English', 'Mathematics': 'Mathematics', 'Science': 'Science', 'Good Manners': 'Good Manners', 'Araling Panlipunan': 'Araling Panlipunan', 'EPP': 'Edukasyong Pantahanan', 'MAPEH': 'MAPEH' };
+    Object.entries(subj).forEach(([k, l]) => {
+        const r = $(`tr:contains("${l}")`);
+        const g = (grades || []).find(gr => gr.subject.toLowerCase().includes(k.toLowerCase()));
+        if (r.length && g) { [1,2,3,4].forEach(i => r.find('td').eq(i).text(g[`q${i}`] || '')); r.find('td').eq(5).text(g.finalAverage || ''); r.find('td').eq(6).text(g.remarks || ''); }
+    });
+    $('tr:contains("General Average")').find('td').each(function() { if ($(this).text().trim() === '82') $(this).text(userData.gwa || ''); });
+    const cssPath = path.join(FILES_DIR, 'resources/sheet.css');
+    if (fs.existsSync(cssPath)) { const css = await fs.readFile(cssPath, 'utf8'); $('head').append(`<style>${css}</style>`); }
+    return $.html();
 }
 
-app.post('/api/preview-sf9-page/:page', async (req, res) => {
-  const { userData } = req.body;
-  const page = req.params.page;
-  try {
-    const fileName = page === '1' ? 'K-12 Front.html' : 'Grade 5 Inside.html';
-    const html = await getPreviewHtml(fileName, userData || {});
-    res.send(html);
-  } catch (err) {
-    console.error("Preview error:", err);
-    res.status(500).send("Error generating preview");
-  }
+app.post('/api/process-html/:page', async (req, res) => {
+    try {
+        const page = req.params.page;
+        const htmlPath = path.join(FILES_DIR, page === '1' ? 'K-12 Front.html' : 'Grade 5 Inside.html');
+        const html = await processHtmlForClient(htmlPath, req.body.userData, req.body.grades, req.body.attendance);
+        res.send(html);
+    } catch (e) { res.status(500).send(e.message); }
 });
 
-// Endpoint to generate and download the full Excel file
+// --- PDF PROCESSING ---
+async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
+    const pdfBytes = await fs.readFile(pdfPath);
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const page = pdfDoc.getPages()[0];
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const isFront = pdfPath.includes('k12.pdf');
+    const isInside = pdfPath.includes('inside.pdf');
+    const blank = (x, y, w, h) => page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1) });
+
+    if (isFront) {
+        // Precise coordinates from analysis
+        const replace = (x_col, y_row, text, w=100, size=9) => {
+            const x = x_col * (width / 100);
+            const y = height - (y_row * (height / 100));
+            blank(x - 2, y - 5, w, 15);
+            if (text) page.drawText(text.toString(), { x, y, size, font });
+        };
+        replace(34.8, 11.2, userData.name, 200, 10);
+        replace(29.7, 12.0, userData.age, 30);
+        replace(36.3, 12.0, userData.sex, 40);
+        replace(40.8, 12.0, userData.lrn, 100);
+        replace(31.0, 12.8, userData.grade, 50);
+        replace(40.5, 12.8, userData.section, 80);
+        replace(32.5, 13.7, userData.schoolYear, 100);
+
+        const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+        let tp = 0; let ta = 0;
+        months.forEach((m, i) => {
+            const att = (attendance || []).filter(a => { const d = new Date(a.date); return d.toLocaleString('default', { month: 'long' }) === m; });
+            const p = att.filter(a => a.status === 'present').length;
+            const a = att.filter(a => a.status === 'absent' || a.status === 'excused').length;
+            const x = 5.0 + (i * 1.1);
+            replace(x, 11.9, p, 18, 8);
+            replace(x, 14.3, a, 18, 8);
+            tp += p; ta += a;
+        });
+        replace(18.0, 11.9, tp, 25, 9);
+        replace(18.0, 14.3, ta, 25, 9);
+    }
+
+    if (isInside) {
+        const replace = (x_col, y_row, text, w=50, size=9) => {
+            const x = x_col * (width / 100);
+            const y = height - (y_row * (height / 100));
+            blank(x - 2, y - 5, w, 15);
+            if (text) page.drawText(text.toString(), { x, y, size, font });
+        };
+        const subj = { 'Filipino': 5.1, 'English': 6.57, 'Mathematics': 8.04, 'Science': 9.52, 'Good Manners': 11.6, 'Araling Panlipunan': 14.34, 'EPP': 16.8, 'MAPEH': 19.02 };
+        Object.entries(subj).forEach(([k, y]) => {
+            const g = (grades || []).find(gr => gr.subject.toLowerCase().includes(k.toLowerCase()));
+            if (g) {
+                replace(7.7, y, g.q1); replace(9.7, y, g.q2); replace(11.8, y, g.q3); replace(13.8, y, g.q4);
+                replace(16.3, y, g.finalAverage); replace(18.6, y, g.remarks, 60, 8);
+            }
+        });
+        replace(16.2, 23.8, userData.gwa, 40, 10);
+    }
+    return await pdfDoc.save();
+}
+
+app.post('/api/generate-pdf', async (req, res) => {
+    try {
+        const fullPdf = await PDFDocument.create();
+        const f = await fillPdf(SAMPLE_K12_PDF, req.body.userData, req.body.grades, req.body.attendance);
+        const i = await fillPdf(SAMPLE_INSIDE_PDF, req.body.userData, req.body.grades, req.body.attendance);
+        const d1 = await PDFDocument.load(f); const d2 = await PDFDocument.load(i);
+        const [p1] = await fullPdf.copyPages(d1, [0]); const [p2] = await fullPdf.copyPages(d2, [0]);
+        fullPdf.addPage(p1); fullPdf.addPage(p2);
+        res.contentType("application/pdf");
+        res.send(Buffer.from(await fullPdf.save()));
+    } catch (e) { res.status(500).send(e.message); }
+});
+
 app.post('/api/generate-excel', async (req, res) => {
-  const { userData, role } = req.body;
-  
+  const { userData, grades, attendance, role } = req.body;
   try {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(SAMPLE_EXCEL_PATH);
-    
-    // 1. Fill Student Data in "K-12 Front"
     const frontSheet = workbook.getWorksheet('K-12 Front');
     if (userData && frontSheet) {
-      // Mapping based on find_cells.js
       if (userData.name) frontSheet.getCell('Q12').value = userData.name;
       if (userData.age) frontSheet.getCell('Q13').value = userData.age;
       if (userData.sex) frontSheet.getCell('U13').value = userData.sex;
       if (userData.lrn) frontSheet.getCell('X13').value = userData.lrn;
       if (userData.grade) frontSheet.getCell('R14').value = userData.grade;
       if (userData.section) frontSheet.getCell('V14').value = userData.section;
+      if (userData.schoolYear) frontSheet.getCell('V15').value = userData.schoolYear;
+      if (attendance) {
+        const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
+        months.forEach((month, idx) => {
+          const monthAtt = attendance.filter(a => { const d = new Date(a.date); return d.toLocaleString('default', { month: 'long' }) === month; });
+          const p = monthAtt.filter(a => a.status === 'present').length;
+          const a = monthAtt.filter(a => a.status === 'absent' || a.status === 'excused').length;
+          const col = String.fromCharCode(66 + idx);
+          frontSheet.getCell(`${col}12`).value = p;
+          frontSheet.getCell(`${col}15`).value = a;
+        });
+      }
     }
-
-    // 2. Role-based sheet removal
-    if (role === 'student') {
-      const sheetsToKeep = ['K-12 Front', 'Grade 5 Inside'];
-      // We must iterate backwards when removing by index, or use names
-      workbook.worksheets.forEach(sheet => {
-        if (!sheetsToKeep.includes(sheet.name)) {
-          workbook.removeWorksheet(sheet.id);
+    const insideSheet = workbook.getWorksheet('Grade 5 Inside');
+    if (grades && insideSheet) {
+      const mapping = { 'Filipino': 5, 'English': 7, 'Mathematics': 9, 'Science': 11, 'Good Manners': 13, 'Araling Panlipunan': 16, 'EPP': 19, 'MAPEH': 22 };
+      Object.entries(mapping).forEach(([sub, row]) => {
+        const grade = grades.find(g => g.subject.toLowerCase().includes(sub.toLowerCase()));
+        if (grade) {
+          insideSheet.getCell(`B${row}`).value = grade.q1 || '';
+          insideSheet.getCell(`C${row}`).value = grade.q2 || '';
+          insideSheet.getCell(`D${row}`).value = grade.q3 || '';
+          insideSheet.getCell(`E${row}`).value = grade.q4 || '';
+          insideSheet.getCell(`F${row}`).value = grade.finalAverage || '';
+          insideSheet.getCell(`G${row}`).value = grade.remarks || '';
         }
       });
     }
-
-    // 3. Generate Buffer
-    const buffer = await workbook.xlsx.writeBuffer();
-    
-    // 4. Send File
-    const fileName = `SF9_${userData?.name?.replace(/\s+/g, '_') || 'Report'}.xlsx`;
+    if (role === 'student') {
+      const sheetsToKeep = ['K-12 Front', 'Grade 5 Inside'];
+      workbook.worksheets.forEach(sheet => { if (!sheetsToKeep.includes(sheet.name)) workbook.removeWorksheet(sheet.id); });
+    }
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.send(buffer);
-    
+    res.setHeader('Content-Disposition', 'attachment; filename="SF9.xlsx"');
+    res.send(await workbook.xlsx.writeBuffer());
   } catch (err) {
-    console.error("Error generating Excel:", err);
-    res.status(500).json({ error: 'Failed to generate Excel file' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed' });
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`System2 Local-Ready Backend running on port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => { console.log(`System2 Backend running on port ${PORT}`); });

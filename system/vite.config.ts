@@ -21,15 +21,11 @@ export default defineConfig(({ mode }) => {
             secure: false,
             rewrite: (path) => path.replace(/^\/api\/system1/, '/api')
           },
-          '/api/preview-sf9-page': {
+          '/system2-api': {
             target: 'http://localhost:5001',
             changeOrigin: true,
             secure: false,
-          },
-          '/api/generate-excel': {
-            target: 'http://localhost:5001',
-            changeOrigin: true,
-            secure: false,
+            rewrite: (path) => path.replace(/^\/system2-api/, '')
           },
           '/resources': {
             target: 'http://localhost:5001',

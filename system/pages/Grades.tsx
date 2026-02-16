@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Grade, UserRole } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Grade, UserRole, AttendanceRecord } from '../types';
 import { api } from '../src/api'; // Changed from mockApiService
 import { 
   Award, TrendingUp, Save, 
@@ -19,6 +19,7 @@ const calculateFinalAverageAndRemarks = (q1: number, q2: number, q3: number, q4:
 const GradesPage: React.FC<{ user: User }> = ({ user }) => {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [students, setStudents] = useState<User[]>([]); // To fetch students for dropdown
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempData, setTempData] = useState<Partial<Grade>>({}); // For editing existing grade
@@ -40,35 +41,48 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
 
   // Preview State
   const [isPreviewing, setIsPreviewing] = useState(false);
-  const [activePage, setActivePage] = useState(1);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [activePage, setActivePage] = useState(1);
 
-  const fetchPreview = async (page: number) => {
+  const calculateAge = (birthDate?: string) => {
+    if (!birthDate) return 'N/A';
+    const birth = new Date(birthDate);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age.toString();
+  };
+
+  const fetchPreview = async (page: number = 1) => {
       setActivePage(page);
       setPreviewLoading(true);
+      setIsPreviewing(true);
       try {
           const userData = {
             name: user.name,
-            age: '10', // Placeholder
-            sex: 'MALE', // Placeholder
-            lrn: user.id || '123456789012',
-            grade: 'FIVE', // Placeholder
-            section: 'RIZAL' // Placeholder
+            age: calculateAge(user.birthDate),
+            sex: 'MALE', 
+            lrn: user.lrn || 'N/A',
+            grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
+            section: (user.section || 'N/A').toUpperCase(),
+            schoolYear: user.schoolYear || 'N/A',
+            gwa: user.gwa || 'N/A'
           };
 
-          const response = await fetch(`/api/preview-sf9-page/${page}`, {
+          const response = await fetch(`/system2-api/api/process-html/${page}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userData })
+              body: JSON.stringify({ userData, grades, attendance })
           });
           
-          if (!response.ok) throw new Error("Failed to load preview");
+          if (!response.ok) throw new Error("Failed to generate preview");
           const html = await response.text();
           setPreviewHtml(html);
       } catch (e) {
           console.error(e);
-          setPreviewHtml('<div style="display:flex;justify-content:center;align-items:center;height:100%;color:red;font-weight:bold;">Failed to load preview. System 2 backend might be down.</div>');
+          alert("Failed to load preview.");
       } finally {
           setPreviewLoading(false);
       }
@@ -81,6 +95,11 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
     try {
       const gradesData = await api.getGrades(user.role === UserRole.STUDENT ? user.id : '');
       setGrades(gradesData);
+
+      if (user.role === UserRole.STUDENT) {
+        const attData = await api.getAttendance(user.id);
+        setAttendance(attData);
+      }
 
       if (isFaculty) {
         const allStudents = await api.getUsers(); // Assuming this fetches all users, including students
@@ -301,9 +320,6 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
               </button>
             </>
           )}
-          <button className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-100 rounded-2xl flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-sm">
-             <Printer size={16} /> Print Card
-          </button>
         </div>
       </div>
 
@@ -320,19 +336,63 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                   <button 
                     onClick={async () => {
                       try {
+                        setToast('Preparing PDF...');
                         const userData = {
                           name: user.name,
-                          age: '10', // Placeholder or fetch from profile
-                          sex: 'MALE', // Placeholder or fetch from profile
-                          lrn: user.id || '123456789012',
-                          grade: 'FIVE', // Placeholder
-                          section: 'RIZAL' // Placeholder
+                          age: calculateAge(user.birthDate),
+                          sex: 'MALE', 
+                          lrn: user.lrn || 'N/A',
+                          grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
+                          section: (user.section || 'N/A').toUpperCase(),
+                          schoolYear: user.schoolYear || 'N/A',
+                          gwa: user.gwa || 'N/A'
                         };
                         
-                        const response = await fetch('/api/generate-excel', {
+                        const response = await fetch('/system2-api/api/generate-pdf', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ userData, role: 'student' })
+                          body: JSON.stringify({ userData, grades, attendance })
+                        });
+
+                        if (!response.ok) throw new Error('Generation failed');
+
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `SF9_${user.name.replace(/\s+/g, '_')}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setToast('PDF Downloaded!');
+                        setTimeout(() => setToast(null), 2000);
+                      } catch (err) {
+                        console.error(err);
+                        alert("Failed to download PDF.");
+                      }
+                    }}
+                    className="px-8 py-4 bg-rose-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-rose-700 transition-all hover:-translate-y-1"
+                  >
+                    <Download size={20} /> Download SF9 (PDF)
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const userData = {
+                          name: user.name,
+                          age: calculateAge(user.birthDate),
+                          sex: 'MALE', 
+                          lrn: user.lrn || 'N/A',
+                          grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
+                          section: (user.section || 'N/A').toUpperCase(),
+                          schoolYear: user.schoolYear || 'N/A'
+                        };
+                        
+                        const response = await fetch('/system2-api/api/generate-excel', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ userData, grades, attendance, role: 'student' })
                         });
 
                         if (!response.ok) throw new Error('Generation failed');
@@ -356,11 +416,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                   </button>
 
                   <button 
-                    onClick={() => {
-                        setIsPreviewing(true);
-                        // Initial Load
-                        fetchPreview(1);
-                    }}
+                    onClick={() => fetchPreview(1)}
                     className="px-8 py-4 bg-indigo-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all hover:-translate-y-1"
                   >
                     <FileText size={20} /> Preview SF9
@@ -445,19 +501,35 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                                                           <button 
                                                             onClick={async () => {
                                                               try {
+                                                                // For faculty, we might need to fetch the specific student's attendance first
+                                                                // or just pass empty for now. But to be thorough:
+                                                                const studentAttendance = await api.getAttendance(grade.studentId);
+                                                                
+                                                                // Get student details for correct SF9 construction
+                                                                const student = students.find(s => s.id === grade.studentId);
+
                                                                 const userData = {
                                                                   name: grade.studentName,
-                                                                  age: '10', // Placeholder
-                                                                  sex: 'MALE', // Placeholder
-                                                                  lrn: grade.studentId || '123456789012',
-                                                                  grade: 'FIVE', // Placeholder
-                                                                  section: 'RIZAL' // Placeholder
-                                                                };
-                                                                
-                                                                const response = await fetch('/api/generate-excel', {
+                                                                  age: calculateAge(student?.birthDate),
+                                                                  sex: 'MALE', 
+                                                                  lrn: student?.lrn || 'N/A',
+                                                                                                     grade: (student?.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
+                                                                                                     section: (student?.section || 'N/A').toUpperCase(),
+                                                                                                     schoolYear: student?.schoolYear || 'N/A',
+                                                                                                     gwa: student?.gwa || 'N/A'
+                                                                                                   };                                                                
+                                                                // Filter grades for this student
+                                                                const studentGrades = grades.filter(g => g.studentId === grade.studentId);
+
+                                                                const response = await fetch('/system2-api/api/generate-excel', {
                                                                   method: 'POST',
                                                                   headers: { 'Content-Type': 'application/json' },
-                                                                  body: JSON.stringify({ userData, role: 'teacher' })
+                                                                  body: JSON.stringify({ 
+                                                                    userData, 
+                                                                    grades: studentGrades, 
+                                                                    attendance: studentAttendance, 
+                                                                    role: 'teacher' 
+                                                                  })
                                                                 });
                             
                                                                 if (!response.ok) throw new Error('Generation failed');
@@ -507,7 +579,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                 <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
                     <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
                         <FileText className="text-indigo-600" /> 
-                        SF9 Preview
+                        SF9 High-Fidelity Preview
                     </h3>
                     <div className="flex gap-4">
                         <div className="flex bg-slate-200 dark:bg-slate-800 rounded-xl p-1">
@@ -524,7 +596,10 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                                 Inside Page
                             </button>
                         </div>
-                        <button onClick={() => setIsPreviewing(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X/></button>
+                        <button onClick={() => {
+                            setIsPreviewing(false);
+                            setPreviewHtml('');
+                        }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X/></button>
                     </div>
                 </div>
                 

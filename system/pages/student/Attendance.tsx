@@ -62,27 +62,15 @@ const AttendancePage: React.FC<{ user: User }> = ({ user }) => {
              <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-400">Total Present</span>
-                  {/* <span className="text-xl font-black text-emerald-500">{totalPresent}</span> */}
-                  <div className="flex gap-1">
-                    {[...Array(Math.min(totalPresent, 5))].map((_, i) => <CheckCircle key={i} size={20} className="text-emerald-500" />)}
-                    {totalPresent > 5 && <span className="text-emerald-500 font-bold">...</span>}
-                  </div>
+                  <span className="text-xl font-black text-emerald-500">{totalPresent}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-400">Late Days</span>
-                  {/* <span className="text-xl font-black text-amber-500">{totalLate}</span> */}
-                  <div className="flex gap-1">
-                    {[...Array(Math.min(totalLate, 5))].map((_, i) => <Clock key={i} size={20} className="text-amber-500" />)}
-                    {totalLate > 5 && <span className="text-amber-500 font-bold">...</span>}
-                  </div>
+                  <span className="text-xl font-black text-amber-500">{totalLate}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase tracking-widest text-slate-400">Absent/Excused</span>
-                  {/* <span className="text-xl font-black text-indigo-500">{totalAbsent}</span> */}
-                  <div className="flex gap-1">
-                    {[...Array(Math.min(totalAbsent, 5))].map((_, i) => <XCircle key={i} size={20} className="text-indigo-500" />)}
-                    {totalAbsent > 5 && <span className="text-indigo-500 font-bold">...</span>}
-                  </div>
+                  <span className="text-xl font-black text-indigo-500">{totalAbsent}</span>
                 </div>
              </div>
            </div>

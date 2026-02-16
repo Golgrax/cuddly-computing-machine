@@ -38,26 +38,21 @@ Isang comprehensive na school management portal na dine-design para sa Sto. Niñ
 *   Node.js (v18 o mas mataas)
 *   npm
 
-### Installation
+### Installation (Quick Setup)
 
-1.  I-clone ang repository.
-2.  I-install ang dependencies:
-    ```bash
-    npm install
-    ```
-3.  Mag-set up ng environment variables sa isang `.env` file (optional para sa email):
-    ```env
-    EMAIL_USER=your-email@gmail.com
-    EMAIL_PASS=your-app-password
-    ```
-
-### Pagpapatakbo ng Application (Running the App)
-
-I-start pareho ang backend at frontend servers:
+Run this command in your terminal to automatically clone, install, and start everything:
 
 ```bash
-./run-all.sh
+git clone https://github.com/Golgrax/cuddly-computing-machine.git && cd cuddly-computing-machine && chmod +x run-all.sh && ./run-all.sh --clean
 ```
+
+### Manual Installation
+
+1.  I-clone ang repository.
+2.  Patakbuhin ang auto-installer:
+    ```bash
+    ./run-all.sh --install
+    ```
 
 *   **Frontend:** http://localhost:3000
 *   **Backend:** http://localhost:3001

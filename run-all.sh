@@ -51,6 +51,13 @@ echo "[Main] Starting Backend (Port 3001)..."
 cd system/backend
 node server.js > ../backend.log 2>&1 &
 MAIN_BACKEND_PID=$!
+sleep 2
+if ! ps -p $MAIN_BACKEND_PID > /dev/null; then
+    echo "❌ [Main] Backend (Port 3001) failed to start."
+    echo "--- 📋 LAST 10 LINES OF system/backend.log ---"
+    tail -n 10 ../backend.log
+    echo "-----------------------------------------------"
+fi
 cd ../..
 
 echo "[Main] Starting Frontend (Port 3000)..."
@@ -61,13 +68,21 @@ cd ..
 
 # --- SYSTEM 2 (Excel Evolution / SF9) ---
 echo "[S2] Starting Backend (Port 5001)..."
+# Check if port is already in use
+if lsof -i :5001 > /dev/null 2>&1; then
+    echo "⚠️ [S2] Port 5001 is already in use. Attempting to proceed anyway..."
+fi
+
 cd system2/backend
 node server.js > backend.log 2>&1 &
 S2_BACKEND_PID=$!
 # Add a small delay and check if it's still running
 sleep 2
 if ! ps -p $S2_BACKEND_PID > /dev/null; then
-    echo "❌ [S2] Backend (Port 5001) failed to start. Check system2/backend/backend.log"
+    echo "❌ [S2] Backend (Port 5001) failed to start."
+    echo "--- 📋 LAST 10 LINES OF system2/backend/backend.log ---"
+    tail -n 10 backend.log
+    echo "------------------------------------------------------"
 fi
 cd ../..
 

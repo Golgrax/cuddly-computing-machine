@@ -15,43 +15,45 @@ echo "--- 🚀 STARTING STO. NIÑO PORTAL MULTI-SYSTEM ---"
 install_if_missing() {
     local dir=$1
     local force=$2
-    # Check for a key dependency to verify node_modules is actually populated
-    local check_mod="express"
-    if [[ "$dir" == *"system2/backend"* ]]; then check_mod="cors"; fi
     
-    if [ ! -d "$dir/node_modules/$check_mod" ] || [ "$force" == "true" ]; then
-        echo "📦 [Setup] Installing/Fixing dependencies in $dir..."
-        (cd "$dir" && npm install --no-audit --no-fund)
+    echo "🔍 [Setup] Verifying $dir..."
+    
+    if [ "$force" == "true" ]; then
+        echo "🧹 [Setup] Cleaning $dir/node_modules..."
+        rm -rf "$dir/node_modules" "$dir/package-lock.json"
+    fi
+
+    if [ ! -d "$dir/node_modules" ]; then
+        echo "📦 [Setup] Installing dependencies in $dir (this may take a while)..."
+        (cd "$dir" && npm install --no-audit --no-fund --quiet)
         if [ $? -ne 0 ]; then
             echo "❌ [Setup] Failed to install dependencies in $dir"
             return 1
         fi
+        echo "✅ [Setup] $dir dependencies installed."
+    else
+        echo "✨ [Setup] $dir dependencies already present."
     fi
     return 0
 }
 
 FORCE_INSTALL="false"
-if [ "$1" == "--install" ]; then FORCE_INSTALL="true"; fi
-if [ "$1" == "--clean" ]; then
-    echo "🧹 [Setup] Cleaning old node_modules..."
-    find . -name "node_modules" -type d -prune -exec rm -rf '{}' +
-    FORCE_INSTALL="true"
-fi
+if [ "$1" == "--install" ] || [ "$1" == "--clean" ]; then FORCE_INSTALL="true"; fi
 
-echo "🔍 [Setup] Verifying system integrity..."
-install_if_missing "." "$FORCE_INSTALL" || exit 1
+echo "🔍 [Setup] System integrity check..."
+# Note: we don't install in root anymore since we removed workspaces
 install_if_missing "system" "$FORCE_INSTALL" || exit 1
 install_if_missing "system1" "$FORCE_INSTALL" || exit 1
 install_if_missing "system2" "$FORCE_INSTALL" || exit 1
 install_if_missing "system2/backend" "$FORCE_INSTALL" || exit 1
-echo "✅ [Setup] Dependency check complete."
+echo "✅ [Setup] All systems verified."
 
 # --- MAIN SYSTEM ---
 echo "[Main] Starting Backend (Port 3001)..."
 cd system/backend
 node server.js > ../backend.log 2>&1 &
 MAIN_BACKEND_PID=$!
-sleep 2
+sleep 3
 if ! ps -p $MAIN_BACKEND_PID > /dev/null; then
     echo "❌ [Main] Backend (Port 3001) failed to start."
     echo "--- 📋 LAST 10 LINES OF system/backend.log ---"

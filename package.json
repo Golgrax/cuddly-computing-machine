@@ -3,14 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Sto. Niño Student Access System Multi-Project Repository",
-  "workspaces": [
-    "system",
-    "system1",
-    "system2",
-    "system2/backend"
-  ],
   "scripts": {
-    "install-all": "npm install",
     "start": "./run-all.sh"
   }
 }

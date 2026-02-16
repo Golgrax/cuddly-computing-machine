@@ -27,10 +27,18 @@ I-iinstall nito ang mga sumusunod:
 
 Gumagamit ang system ng local SQLite database (`db.sqlite`). Kailangan mo itong i-seed ng initial data (tables, admin user, etc.) bago patakbuhin ang app.
 
-I-run ang seed script:
+I-run ang seed script (siguraduhing nasa loob ka ng `system` folder o gamitin ang tamang path):
 
 ```bash
+cd system
 node backend/seed.js
+cd ..
+```
+
+O kaya:
+
+```bash
+node system/backend/seed.js
 ```
 
 Dapat may makita kang output na nag-iindicate na na-create na ang tables at na-seed na ang users.

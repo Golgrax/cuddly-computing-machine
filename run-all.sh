@@ -41,6 +41,11 @@ echo "[S2] Starting Backend (Port 5001)..."
 cd system2/backend
 node server.js > backend.log 2>&1 &
 S2_BACKEND_PID=$!
+# Add a small delay and check if it's still running
+sleep 2
+if ! ps -p $S2_BACKEND_PID > /dev/null; then
+    echo "❌ [S2] Backend (Port 5001) failed to start. Check system2/backend/backend.log"
+fi
 cd ../..
 
 echo "[S2] Starting Frontend (Port 3002)..."

@@ -16,6 +16,14 @@ app.use('/resources', express.static(path.join(__dirname, 'files/resources')));
 
 const SAMPLE_EXCEL_PATH = path.join(__dirname, '../../samples/SF 9 REPORT CARD AUTOMATED (SY 2025-2026) GRADE 5(1)(1).xlsx');
 
+console.log(`[S2-Backend] Checking for sample Excel at: ${SAMPLE_EXCEL_PATH}`);
+if (!fs.existsSync(SAMPLE_EXCEL_PATH)) {
+  console.error(`❌ [S2-Backend] ERROR: Sample Excel file not found at ${SAMPLE_EXCEL_PATH}`);
+  // We don't exit, but we warn loudly
+} else {
+  console.log(`✅ [S2-Backend] Sample Excel file found.`);
+}
+
 // Helper to process page for HTML Preview
 async function getPreviewHtml(fileName, userData) {
   const filePath = path.join(__dirname, 'files', fileName);
@@ -129,6 +137,6 @@ app.post('/api/generate-excel', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`System2 Local-Ready Backend running on port ${PORT}`);
 });

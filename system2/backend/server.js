@@ -3,15 +3,80 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs-extra');
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb, StandardFonts, PDFName, PDFRawStream } = require('pdf-lib');
 const ExcelJS = require('exceljs');
 const cheerio = require('cheerio');
+const pako = require('pako');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
+
+// ... (existing constants)
+
+// --- STREAM CLEANING UTILITY ---
+async function cleanPageContent(page, stringsToRemove) {
+    const { Contents } = page.node.normalizedEntries();
+    if (!Contents) return;
+
+    const streams = Array.isArray(Contents) ? Contents : [Contents];
+    
+    for (const streamRef of streams) {
+        const stream = page.doc.context.lookup(streamRef);
+        if (!(stream instanceof PDFRawStream)) continue;
+
+        let decoded;
+        try {
+            // Attempt raw decompression
+            // pdf-lib raw streams are usually FlateDecode
+            const buffer = stream.contents;
+            decoded = pako.inflate(buffer);
+        } catch (e) {
+            console.warn("Failed to decompress stream, skipping cleanup:", e.message);
+            continue;
+        }
+
+        let text = new TextDecoder().decode(decoded);
+        let modified = false;
+
+        stringsToRemove.forEach(str => {
+            // PDF text is usually (Text)Tj
+            // We escape special regex chars in str just in case
+            const escapedStr = str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const patterns = [
+                `\\(${escapedStr}\\)Tj`,      // Standard
+                `\\(${escapedStr}\\) Tj`,     // Standard with space
+                `\\(${escapedStr}\\) TJ`,     // Array based (less common for single words)
+                `\\(${escapedStr}\\)'`,       // New line text
+            ];
+            
+            patterns.forEach(p => {
+                const regex = new RegExp(p, 'g');
+                if (regex.test(text)) {
+                    text = text.replace(regex, '()Tj'); // Replace with empty text command
+                    modified = true;
+                }
+            });
+        });
+
+        if (modified) {
+            // Re-compress and update stream
+            const recompressed = pako.deflate(new TextEncoder().encode(text));
+            // We need to update the stream content in place or replace it.
+            // In pdf-lib, modifying the buffer directly on the stream object usually works 
+            // if we haven't flushed it yet.
+            stream.contents = recompressed;
+            // Ensure Filter is FlateDecode
+            stream.dict.set(PDFName.of('Filter'), PDFName.of('FlateDecode'));
+            // Update length
+            stream.dict.set(PDFName.of('Length'), page.doc.context.obj(recompressed.length));
+        }
+    }
+}
+
+// ... (rest of imports/setup)
 
 const FILES_DIR = path.join(__dirname, 'files');
 const SAMPLE_EXCEL_PATH = path.join(__dirname, '../../samples/SF 9 REPORT CARD AUTOMATED (SY 2025-2026) GRADE 5(1)(1).xlsx');
@@ -31,14 +96,15 @@ async function processHtmlForClient(htmlPath, userData, grades = [], attendance 
         if (src && src.startsWith('resources/')) $(this).attr('src', `/system2-api/resources/${src.replace('resources/', '')}`);
     });
     $('td').each(function() {
-        const t = $(this).text();
-        if (t.includes('Carlo Dela Cruz')) $(this).text(userData.name || '');
-        if (t.trim() === '10' && $(this).prev().text().includes('Age:')) $(this).text(userData.age || '');
-        if (t.includes('MALE')) $(this).text(userData.sex || 'MALE');
-        if (t.includes('123456789012')) $(this).text(userData.lrn || '');
-        if (t.trim() === 'FIVE') $(this).text(userData.grade || '');
-        if (t.trim() === 'RIZAL') $(this).text(userData.section || '');
-        if (t.includes('2025-2026')) $(this).text(userData.schoolYear || '');
+        const t = $(this).text().trim();
+        if (t === 'Carlo Dela Cruz') $(this).text(userData.name || '');
+        if (t === '10' && $(this).prev().text().includes('Age:')) $(this).text(userData.age || '');
+        if (t === 'MALE') $(this).text(userData.sex || 'MALE');
+        if (t === '123456789012') $(this).text(userData.lrn || '');
+        if (t === 'FIVE') $(this).text(userData.grade || '');
+        if (t === 'RIZAL') $(this).text(userData.section || '');
+        if (t === '2025-2026') $(this).text(userData.schoolYear || '');
+        if (t === 'JUAN DELA CRUZ') $(this).text(userData.teacherName || userData.parentName || 'JUAN DELA CRUZ');
     });
     const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
     const pRow = $('tr:contains("No. of days present")');
@@ -89,28 +155,43 @@ async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
     const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const isFront = pdfPath.includes('k12.pdf');
     const isInside = pdfPath.includes('inside.pdf');
-    const blank = (x, y, w, h) => page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1) });
 
-    const replace = (px, py, text, w=100, size=9) => {
+    // Remove text instead of blanking
+    const toRemove = [];
+    if (isFront) {
+        toRemove.push(
+            'Carlo Dela Cruz', '10', 'MALE', '123456789012', 
+            'FIVE', 'RIZAL', '2025-2026', 
+            '9', '8', '10', '90', // Attendance place holders
+            '1', '2', '0' // Absent placeholders
+        );
+    }
+    if (isInside) {
+        toRemove.push(
+            '77', '78', '84', '81', '80', '79', '85', '87', '83', '86', '88', '82', // Grades
+            'Passed'
+        );
+    }
+    
+    await cleanPageContent(page, toRemove);
+
+    const replace = (px, py, text, size=9) => {
         const x = px * (width / PAGE_UNIT_WIDTH);
         const y = height - (py * (height / PAGE_UNIT_HEIGHT));
-        // Scale blank rectangle as well
-        const bw = w * (width / 612); // Assuming 612 is the base width for 100 units in previous logic? No.
-        // Let's just use a reasonable width in points.
-        blank(x - 2, y - 5, w, size + 5);
+        // No blanking needed now!
         if (text !== undefined && text !== null) {
             page.drawText(text.toString(), { x, y, size, font });
         }
     };
 
     if (isFront) {
-        replace(34.85, 11.24, userData.name, 150, 10);
-        replace(29.73, 12.02, userData.age, 30);
-        replace(36.33, 12.02, userData.sex, 40);
-        replace(40.82, 12.02, userData.lrn, 100);
-        replace(31.04, 12.87, userData.grade, 50);
-        replace(40.52, 12.87, userData.section, 80);
-        replace(32.52, 13.71, userData.schoolYear, 100);
+        replace(34.85, 11.24, userData.name, 10);
+        replace(29.73, 12.02, userData.age);
+        replace(36.33, 12.02, userData.sex);
+        replace(40.82, 12.02, userData.lrn);
+        replace(31.04, 12.87, userData.grade);
+        replace(40.52, 12.87, userData.section);
+        replace(32.52, 13.71, userData.schoolYear);
 
         const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
         let tp = 0; let ta = 0;
@@ -119,12 +200,12 @@ async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
             const p = att.filter(a => a.status === 'present').length;
             const a = att.filter(a => a.status === 'absent' || a.status === 'excused').length;
             const x = 5.01 + (i * 1.101);
-            replace(x, 11.94, p > 0 ? p : '0', 15, 8);
-            replace(x, 14.39, a > 0 ? a : '0', 15, 8);
+            replace(x, 11.94, p > 0 ? p : '0', 8);
+            replace(x, 14.39, a > 0 ? a : '0', 8);
             tp += p; ta += a;
         });
-        replace(18.05, 11.93, tp, 25, 9);
-        replace(18.05, 14.39, ta, 25, 9);
+        replace(18.05, 11.93, tp, 9);
+        replace(18.05, 14.39, ta, 9);
     }
 
     if (isInside) {
@@ -144,16 +225,16 @@ async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
             const g = (grades || []).find(gr => gr.subject.toLowerCase().includes(k.toLowerCase()));
             if (g) {
                 const x_offset = (k === 'Music & Arts' || k === 'PE & Health') ? 0.61 : 0;
-                replace(7.72 + x_offset, y, g.q1, 20); 
-                replace(9.76 + x_offset, y, g.q2, 20); 
-                replace(11.80 + x_offset, y, g.q3, 20); 
-                replace(13.84 + x_offset, y, g.q4, 20);
+                replace(7.72 + x_offset, y, g.q1, 15); 
+                replace(9.76 + x_offset, y, g.q2, 15); 
+                replace(11.80 + x_offset, y, g.q3, 15); 
+                replace(13.84 + x_offset, y, g.q4, 15);
                 const fa_x = (k === 'Music & Arts' || k === 'PE & Health') ? 17.22 : 16.31;
-                replace(fa_x, y, g.finalAverage, 25); 
-                replace(18.65, y, g.remarks, 50, 8);
+                replace(fa_x, y, g.finalAverage, 15); 
+                replace(18.65, y, g.remarks, 30, 8);
             }
         });
-        replace(16.27, 23.83, userData.gwa, 40, 10);
+        replace(16.27, 23.83, userData.gwa, 30, 10);
     }
     return await pdfDoc.save();
 }
@@ -168,7 +249,10 @@ app.post('/api/generate-pdf', async (req, res) => {
         fullPdf.addPage(p1); fullPdf.addPage(p2);
         res.contentType("application/pdf");
         res.send(Buffer.from(await fullPdf.save()));
-    } catch (e) { res.status(500).send(e.message); }
+    } catch (e) { 
+        console.error(e);
+        res.status(500).send(e.message); 
+    }
 });
 
 app.post('/api/generate-excel', async (req, res) => {

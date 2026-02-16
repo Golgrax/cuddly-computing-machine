@@ -354,7 +354,10 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                           body: JSON.stringify({ userData, grades, attendance })
                         });
 
-                        if (!response.ok) throw new Error('Generation failed');
+                        if (!response.ok) {
+                          const errorText = await response.text();
+                          throw new Error(errorText || 'Generation failed');
+                        }
 
                         const blob = await response.blob();
                         const url = window.URL.createObjectURL(blob);

@@ -78,6 +78,9 @@ app.post('/api/process-html/:page', async (req, res) => {
 });
 
 // --- PDF PROCESSING ---
+const PAGE_UNIT_WIDTH = 52.625;
+const PAGE_UNIT_HEIGHT = 37.188;
+
 async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
     const pdfBytes = await fs.readFile(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -88,21 +91,26 @@ async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
     const isInside = pdfPath.includes('inside.pdf');
     const blank = (x, y, w, h) => page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1) });
 
+    const replace = (px, py, text, w=100, size=9) => {
+        const x = px * (width / PAGE_UNIT_WIDTH);
+        const y = height - (py * (height / PAGE_UNIT_HEIGHT));
+        // Scale blank rectangle as well
+        const bw = w * (width / 612); // Assuming 612 is the base width for 100 units in previous logic? No.
+        // Let's just use a reasonable width in points.
+        blank(x - 2, y - 5, w, size + 5);
+        if (text !== undefined && text !== null) {
+            page.drawText(text.toString(), { x, y, size, font });
+        }
+    };
+
     if (isFront) {
-        // Precise coordinates from analysis
-        const replace = (x_col, y_row, text, w=100, size=9) => {
-            const x = x_col * (width / 100);
-            const y = height - (y_row * (height / 100));
-            blank(x - 2, y - 5, w, 15);
-            if (text) page.drawText(text.toString(), { x, y, size, font });
-        };
-        replace(34.8, 11.2, userData.name, 200, 10);
-        replace(29.7, 12.0, userData.age, 30);
-        replace(36.3, 12.0, userData.sex, 40);
-        replace(40.8, 12.0, userData.lrn, 100);
-        replace(31.0, 12.8, userData.grade, 50);
-        replace(40.5, 12.8, userData.section, 80);
-        replace(32.5, 13.7, userData.schoolYear, 100);
+        replace(34.85, 11.24, userData.name, 150, 10);
+        replace(29.73, 12.02, userData.age, 30);
+        replace(36.33, 12.02, userData.sex, 40);
+        replace(40.82, 12.02, userData.lrn, 100);
+        replace(31.04, 12.87, userData.grade, 50);
+        replace(40.52, 12.87, userData.section, 80);
+        replace(32.52, 13.71, userData.schoolYear, 100);
 
         const months = ['June', 'July', 'August', 'September', 'October', 'November', 'December', 'January', 'February', 'March'];
         let tp = 0; let ta = 0;
@@ -110,31 +118,42 @@ async function fillPdf(pdfPath, userData, grades = [], attendance = []) {
             const att = (attendance || []).filter(a => { const d = new Date(a.date); return d.toLocaleString('default', { month: 'long' }) === m; });
             const p = att.filter(a => a.status === 'present').length;
             const a = att.filter(a => a.status === 'absent' || a.status === 'excused').length;
-            const x = 5.0 + (i * 1.1);
-            replace(x, 11.9, p, 18, 8);
-            replace(x, 14.3, a, 18, 8);
+            const x = 5.01 + (i * 1.101);
+            replace(x, 11.94, p > 0 ? p : '0', 15, 8);
+            replace(x, 14.39, a > 0 ? a : '0', 15, 8);
             tp += p; ta += a;
         });
-        replace(18.0, 11.9, tp, 25, 9);
-        replace(18.0, 14.3, ta, 25, 9);
+        replace(18.05, 11.93, tp, 25, 9);
+        replace(18.05, 14.39, ta, 25, 9);
     }
 
     if (isInside) {
-        const replace = (x_col, y_row, text, w=50, size=9) => {
-            const x = x_col * (width / 100);
-            const y = height - (y_row * (height / 100));
-            blank(x - 2, y - 5, w, 15);
-            if (text) page.drawText(text.toString(), { x, y, size, font });
+        const subj = { 
+            'Filipino': 5.09, 
+            'English': 6.57, 
+            'Mathematics': 8.04, 
+            'Science': 9.52, 
+            'Good Manners': 11.60, 
+            'Araling Panlipunan': 13.98, 
+            'EPP': 16.80, 
+            'MAPEH': 19.02,
+            'Music & Arts': 20.13,
+            'PE & Health': 21.09
         };
-        const subj = { 'Filipino': 5.1, 'English': 6.57, 'Mathematics': 8.04, 'Science': 9.52, 'Good Manners': 11.6, 'Araling Panlipunan': 14.34, 'EPP': 16.8, 'MAPEH': 19.02 };
         Object.entries(subj).forEach(([k, y]) => {
             const g = (grades || []).find(gr => gr.subject.toLowerCase().includes(k.toLowerCase()));
             if (g) {
-                replace(7.7, y, g.q1); replace(9.7, y, g.q2); replace(11.8, y, g.q3); replace(13.8, y, g.q4);
-                replace(16.3, y, g.finalAverage); replace(18.6, y, g.remarks, 60, 8);
+                const x_offset = (k === 'Music & Arts' || k === 'PE & Health') ? 0.61 : 0;
+                replace(7.72 + x_offset, y, g.q1, 20); 
+                replace(9.76 + x_offset, y, g.q2, 20); 
+                replace(11.80 + x_offset, y, g.q3, 20); 
+                replace(13.84 + x_offset, y, g.q4, 20);
+                const fa_x = (k === 'Music & Arts' || k === 'PE & Health') ? 17.22 : 16.31;
+                replace(fa_x, y, g.finalAverage, 25); 
+                replace(18.65, y, g.remarks, 50, 8);
             }
         });
-        replace(16.2, 23.8, userData.gwa, 40, 10);
+        replace(16.27, 23.83, userData.gwa, 40, 10);
     }
     return await pdfDoc.save();
 }
@@ -192,6 +211,9 @@ app.post('/api/generate-excel', async (req, res) => {
           insideSheet.getCell(`G${row}`).value = grade.remarks || '';
         }
       });
+      if (userData.gwa) {
+        insideSheet.getCell('F27').value = userData.gwa;
+      }
     }
     if (role === 'student') {
       const sheetsToKeep = ['K-12 Front', 'Grade 5 Inside'];

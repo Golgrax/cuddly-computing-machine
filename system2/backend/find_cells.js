@@ -14,7 +14,7 @@ async function findCells() {
     worksheet.eachRow((row, rowNumber) => {
       row.eachCell((cell, colNumber) => {
         const val = cell.value ? cell.value.toString() : '';
-        if (typeof val === 'string' && (val.includes('Name:') || val.includes('Age:') || val.includes('Sex:') || val.includes('Grade:') || val.includes('Section:') || val.includes('LRN:'))) {
+        if (typeof val === 'string' && (val.includes('Average') || val.includes('Name:') || val.includes('Age:') || val.includes('Sex:') || val.includes('Grade:') || val.includes('Section:') || val.includes('LRN:'))) {
            // Check neighboring cells for context if needed, but for now just print location
            console.log(`Found "${val}" at ${cell.address}`);
         }

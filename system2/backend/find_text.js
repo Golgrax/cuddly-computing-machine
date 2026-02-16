@@ -5,8 +5,8 @@ const pdfParser = new PDFParser();
 
 pdfParser.on("pdfParser_dataError", errData => console.error(errData.parserError) );
 pdfParser.on("pdfParser_dataReady", pdfData => {
-    // console.log(JSON.stringify(pdfData));
-    pdfData.Pages.forEach(page => {
+    pdfData.Pages.forEach((page, index) => {
+        console.log(`Page ${index + 1}: width=${page.Width}, height=${page.Height}`);
         page.Texts.forEach(text => {
             const str = decodeURIComponent(text.R[0].T);
             console.log(`Text: "${str}" at x: ${text.x}, y: ${text.y}`);
@@ -14,4 +14,4 @@ pdfParser.on("pdfParser_dataReady", pdfData => {
     });
 });
 
-pdfParser.loadPDF("../../sample/k12.pdf");
+pdfParser.loadPDF("../../sample/inside.pdf");

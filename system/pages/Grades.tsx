@@ -41,9 +41,8 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
 
   // Preview State
   const [isPreviewing, setIsPreviewing] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewPdfUrl, setPreviewPdfUrl] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [activePage, setActivePage] = useState(1);
 
   const calculateAge = (birthDate?: string) => {
     if (!birthDate) return 'N/A';
@@ -55,15 +54,14 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
     return age.toString();
   };
 
-  const fetchPreview = async (page: number = 1) => {
-      setActivePage(page);
+  const fetchPreview = async () => {
       setPreviewLoading(true);
       setIsPreviewing(true);
       try {
           const userData = {
             name: user.name,
             age: calculateAge(user.birthDate),
-            sex: 'MALE', 
+            sex: user.sex || 'MALE', 
             lrn: user.lrn || 'N/A',
             grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
             section: (user.section || 'N/A').toUpperCase(),
@@ -71,15 +69,17 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
             gwa: user.gwa || 'N/A'
           };
 
-          const response = await fetch(`/system2-api/api/process-html/${page}`, {
+          const response = await fetch('/system2-api/api/generate-pdf', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userData, grades, attendance })
           });
           
           if (!response.ok) throw new Error("Failed to generate preview");
-          const html = await response.text();
-          setPreviewHtml(html);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          if (previewPdfUrl) window.URL.revokeObjectURL(previewPdfUrl);
+          setPreviewPdfUrl(url);
       } catch (e) {
           console.error(e);
           alert("Failed to load preview.");
@@ -340,7 +340,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                         const userData = {
                           name: user.name,
                           age: calculateAge(user.birthDate),
-                          sex: 'MALE', 
+                          sex: user.sex || 'MALE', 
                           lrn: user.lrn || 'N/A',
                           grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
                           section: (user.section || 'N/A').toUpperCase(),
@@ -382,11 +382,12 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                         const userData = {
                           name: user.name,
                           age: calculateAge(user.birthDate),
-                          sex: 'MALE', 
+                          sex: user.sex || 'MALE', 
                           lrn: user.lrn || 'N/A',
                           grade: (user.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
                           section: (user.section || 'N/A').toUpperCase(),
-                          schoolYear: user.schoolYear || 'N/A'
+                          schoolYear: user.schoolYear || 'N/A',
+                          gwa: user.gwa || 'N/A'
                         };
                         
                         const response = await fetch('/system2-api/api/generate-excel', {
@@ -416,7 +417,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                   </button>
 
                   <button 
-                    onClick={() => fetchPreview(1)}
+                    onClick={() => fetchPreview()}
                     className="px-8 py-4 bg-indigo-600 text-white rounded-2xl flex items-center gap-3 text-sm font-black uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all hover:-translate-y-1"
                   >
                     <FileText size={20} /> Preview SF9
@@ -511,7 +512,7 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                                                                 const userData = {
                                                                   name: grade.studentName,
                                                                   age: calculateAge(student?.birthDate),
-                                                                  sex: 'MALE', 
+                                                                  sex: student?.sex || 'MALE', 
                                                                   lrn: student?.lrn || 'N/A',
                                                                                                      grade: (student?.gradeLevel || 'N/A').toUpperCase().replace('GRADE ', ''),
                                                                                                      section: (student?.section || 'N/A').toUpperCase(),
@@ -582,37 +583,24 @@ const GradesPage: React.FC<{ user: User }> = ({ user }) => {
                         SF9 High-Fidelity Preview
                     </h3>
                     <div className="flex gap-4">
-                        <div className="flex bg-slate-200 dark:bg-slate-800 rounded-xl p-1">
-                            <button 
-                                onClick={() => fetchPreview(1)}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activePage === 1 ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Front Page
-                            </button>
-                            <button 
-                                onClick={() => fetchPreview(2)}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activePage === 2 ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Inside Page
-                            </button>
-                        </div>
                         <button onClick={() => {
                             setIsPreviewing(false);
-                            setPreviewHtml('');
+                            if (previewPdfUrl) window.URL.revokeObjectURL(previewPdfUrl);
+                            setPreviewPdfUrl('');
                         }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"><X/></button>
                     </div>
                 </div>
                 
-                <div className="flex-1 bg-slate-200/50 dark:bg-black/20 overflow-auto p-8 flex justify-center">
+                <div className="flex-1 bg-slate-200/50 dark:bg-black/20 overflow-auto p-0 flex justify-center">
                     {previewLoading ? (
-                        <div className="flex items-center justify-center h-full">
+                        <div className="flex items-center justify-center h-full w-full">
                             <Loader2 className="animate-spin text-indigo-600" size={48} />
                         </div>
                     ) : (
-                        <div className="bg-white shadow-xl animate-in fade-in zoom-in-95 duration-300 origin-top" style={{ width: '8.5in', minHeight: '11in' }}>
+                        <div className="w-full h-full">
                             <iframe 
-                                srcDoc={previewHtml} 
-                                className="w-full h-full min-h-[11in] border-none" 
+                                src={previewPdfUrl} 
+                                className="w-full h-full border-none" 
                                 title="SF9 Preview"
                             />
                         </div>

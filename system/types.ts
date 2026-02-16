@@ -48,6 +48,7 @@ export interface User {
   guardianPhone?: string;
   psaStatus?: 'Verified' | 'Pending' | 'Missing';
   status?: 'active' | 'completed' | 'dropped';
+  sex?: 'MALE' | 'FEMALE';
   emailVerified?: boolean;
   badges?: UserBadge[];
   birthDate?: string;

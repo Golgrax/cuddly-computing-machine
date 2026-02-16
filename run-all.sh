@@ -25,7 +25,7 @@ install_if_missing() {
 
     if [ ! -d "$dir/node_modules" ]; then
         echo "📦 [Setup] Installing dependencies in $dir (this may take a while)..."
-        (cd "$dir" && npm install --no-audit --no-fund --quiet)
+        npm install --prefix "$dir" --no-audit --no-fund
         if [ $? -ne 0 ]; then
             echo "❌ [Setup] Failed to install dependencies in $dir"
             return 1

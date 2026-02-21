@@ -367,7 +367,7 @@ const App: React.FC = () => {
             )}
             <Sidebar user={user} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} onLogout={handleLogout} onUpdateUser={setUser} />
             <Header onMenuClick={() => setIsSidebarOpen(true)} user={user} />
-            <main className="lg:pl-72 p-6 lg:p-10 max-w-7xl mx-auto pb-24">
+            <main className="lg:pl-72 p-6 lg:p-10 max-w-[1500px] mx-auto pb-24">
               <Routes>
                 <Route path="/" element={<Dashboard user={user} />} />
                 <Route path="/inbox" element={<Inbox user={user} />} />

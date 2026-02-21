@@ -125,8 +125,8 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
         user.role === UserRole.TEACHER ? 'bg-gradient-to-br from-rose-700 via-rose-800 to-rose-950 text-white' :
         'bg-gradient-to-br from-indigo-700 to-indigo-900 text-white'
       }`}>
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between lg:items-center gap-10">
-          <div className="max-w-2xl">
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between lg:items-center gap-12">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-4 mb-6 opacity-70">
               <div className="w-8 h-8 bg-white rounded-lg p-1">
                 <img src={LOGO_URL} className="w-full h-full object-contain" alt="Sto. Niño Logo" />
@@ -138,7 +138,7 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
             <h1 className="text-5xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-6">
               Identity Management
             </h1>
-            <p className="text-xl font-medium opacity-80 leading-relaxed max-w-lg mb-10">
+            <p className="text-xl font-medium opacity-80 leading-relaxed max-w-2xl mb-10">
               {isAdminOrFaculty 
                 ? "Unified portal for DepEd record compliance and masterlist verification."
                 : user.role === UserRole.STUDENT && user.honorStatus ? 
@@ -157,21 +157,21 @@ const Dashboard: React.FC<{ user: User }> = ({ user }) => {
           </div>
           
           {user.role === UserRole.STUDENT && (
-            <div className="glass p-10 rounded-[3rem] min-w-[360px] shadow-2xl border-white/20 animate-float">
-               <div className="flex justify-between items-start mb-10">
+            <div className="glass p-12 rounded-[3.5rem] w-full lg:w-[400px] shadow-2xl border-white/20 animate-float shrink-0">
+               <div className="flex justify-between items-start mb-12">
                  <div>
-                   <p className="text-[11px] font-black uppercase text-white/50 tracking-[0.3em] mb-2">Learner Reference No.</p>
-                   <p className="text-3xl font-black text-school-gold tracking-widest leading-none">{user.lrn}</p>
+                   <p className="text-[12px] font-black uppercase text-white/50 tracking-[0.3em] mb-3">Learner Reference No.</p>
+                   <p className="text-4xl font-black text-school-gold tracking-widest leading-none">{user.lrn}</p>
                  </div>
                </div>
-               <div className="grid grid-cols-5 gap-4">
-                 <div className="space-y-1 col-span-3">
-                   <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">Grade and Section</p>
-                   <p className="text-sm font-black uppercase whitespace-nowrap">{user.gradeLevel} - {user.section || 'N/A'}</p>
+               <div className="grid grid-cols-1 sm:grid-cols-5 gap-6">
+                 <div className="space-y-2 col-span-3">
+                   <p className="text-[11px] font-black uppercase text-white/40 tracking-widest">Grade and Section</p>
+                   <p className="text-lg font-black uppercase leading-tight">{user.gradeLevel} - {user.section || 'N/A'}</p>
                  </div>
-                 <div className="space-y-1 text-right col-span-2">
-                   <p className="text-[10px] font-black uppercase text-white/40 tracking-widest">School Year</p>
-                   <p className="text-sm font-black uppercase">{schoolYear}</p>
+                 <div className="space-y-2 text-left sm:text-right col-span-2">
+                   <p className="text-[11px] font-black uppercase text-white/40 tracking-widest">School Year</p>
+                   <p className="text-lg font-black uppercase">{schoolYear}</p>
                  </div>
                </div>
             </div>

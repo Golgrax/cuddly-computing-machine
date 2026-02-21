@@ -33,6 +33,7 @@ import DropoutRequestPage from './pages/student/DropoutRequest';
 import ProfilePage from './pages/Profile';
 import AdminFacilities from './pages/admin/Facilities';
 import FacilitiesPage from './pages/Facilities'; // New Import
+import StudentFacilities from './pages/student/Facilities';
 import FacultyEmail from './pages/faculty/FacultyEmail';
 import RequestDocs from './pages/student/RequestDocs';
 import AttendanceSheet from './pages/faculty/AttendanceSheet';
@@ -121,6 +122,7 @@ const Sidebar: React.FC<{ user: User, isOpen: boolean, onClose: () => void, onLo
       { name: 'Assignments', path: '/assignments', icon: FolderCheck }, // Added Assignments here too as implicit
       { name: 'Official Requests', path: '/requests', icon: FileText },
       { name: 'My ID', path: '/id-card', icon: QrCode },
+      { name: 'Facilities', path: '/student/facilities', icon: Building2 },
       { name: 'Transfer-Out', path: '/transfer-out', icon: ShieldAlert },
     ],
     [UserRole.TEACHER]: [
@@ -380,6 +382,7 @@ const App: React.FC = () => {
                 <Route path="/attendance" element={<AttendancePage user={user} />} />
                 <Route path="/requests" element={<RequestDocs user={user} />} />
                 <Route path="/transfer-out" element={<DropoutRequestPage user={user} />} />
+                <Route path="/student/facilities" element={<StudentFacilities />} />
                 {/* <Route path="/enrollment" element={user.role === UserRole.TRANSFEREE ? <EnrollmentPage user={user} /> : <Navigate to="/" />} /> */}
                 <Route path="/id-card" element={<StudentID user={user} />} />
                 <Route path="/announcements" element={<FacultyAnnouncements user={user} />} />

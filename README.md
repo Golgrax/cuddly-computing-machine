@@ -60,6 +60,17 @@ chmod +x run-all.sh && ./run-all.sh --clean
 *   **Main Portal (Frontend):** http://localhost:3000
 *   **Excel/SF9 Card evolution (Frontend):** http://localhost:3002
 
+### 🗄️ Awtomatikong Seed at Sample Data (Auto-Seeded Sample Data)
+Ang database (`db.sqlite`) ay **awtomatikong nililikha at sinisi-seed** sa unang pagtakbo gamit ang default testing credentials. Hindi mo na kailangang mag-seed nang manu-mano.
+
+Narito ang mga default account na magagamit sa pag-test:
+
+| Papel (Role) | Email Address | Password | Paglalarawan (Description) |
+| :--- | :--- | :--- | :--- |
+| **System Admin** | `admin@gmail.com` | `123` | Buong pamamahala sa portal, facilities, at accounts. |
+| **Teacher** | `teacher@gmail.com` | `123` | Pamamahala ng advisory class, grade sheet, at announcements. |
+| **Student** | `student@gmail.com` | `123` | Pag-check ng grades (SF9), clearance, attendance, at download ng digital ID. |
+
 ## Mga Roles
 *   **Student:** Access sa personal academic records.
 *   **Teacher:** Nagma-manage ng classes at grades.

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, EnrollmentApplication } from '../../types';
-import { api } from '../../mockApiService';
+import { api } from '../../src/api';
 import { Search, Loader2, CheckCircle, Clock, XCircle, MoreVertical } from 'lucide-react';
 
 const TransfereeStatus: React.FC<{ user: User }> = ({ user }) => {

@@ -87,7 +87,7 @@ cd ../..
 
 echo "[Main] Starting Frontend (Port 3000)..."
 cd system
-npm run dev -- --port 3000 --host 127.0.0.1 > frontend.log 2>&1 &
+npm run dev -- --port 3000 --host 0.0.0.0 > frontend.log 2>&1 &
 MAIN_FRONTEND_PID=$!
 cd ..
 
@@ -115,7 +115,7 @@ cd ../..
 
 echo "[S2] Starting Frontend (Port 3002)..."
 cd system2
-npm run dev -- --port 3002 --host 127.0.0.1 > frontend.log 2>&1 &
+npm run dev -- --port 3002 --host 0.0.0.0 > frontend.log 2>&1 &
 S2_FRONTEND_PID=$!
 cd ..
 

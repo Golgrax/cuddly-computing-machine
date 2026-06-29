@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { FileText, Download, User, CheckCircle } from 'lucide-react';
+import { FileText, Download, CheckCircle } from 'lucide-react';
 
 interface UserData {
   name: string;

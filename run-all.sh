@@ -60,6 +60,17 @@ install_if_missing "system2" "$FORCE_INSTALL" || exit 1
 install_if_missing "system2/backend" "$FORCE_INSTALL" || exit 1
 echo "✅ [Setup] All systems verified."
 
+# --- DATABASE INITIALIZATION CHECK ---
+if [ ! -f "system/backend/db.sqlite" ]; then
+    echo "🗄️ [Setup] Database not found. Seeding initial database..."
+    node system/backend/seed.js
+    if [ $? -ne 0 ]; then
+        echo "❌ [Setup] Failed to seed database."
+        exit 1
+    fi
+    echo "✅ [Setup] Database initialized and seeded."
+fi
+
 # --- MAIN SYSTEM ---
 echo "[Main] Starting Backend (Port 3001)..."
 cd system/backend

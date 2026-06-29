@@ -9,33 +9,23 @@ Ang guide na ito ay nagbibigay ng step-by-step instructions para i-set up at pat
 
 ## 1. Installation
 
-Buksan ang iyong terminal sa project root directory at i-run ang sumusunod na command para i-install ang lahat ng dependencies (frontend at backend):
+Buksan ang iyong terminal sa project root directory at i-run ang install-all script para i-clean at i-install ang lahat ng dependencies ng root at subsystems (frontend at backend):
 
 ```bash
-npm install
+chmod +x install-all.sh run-all.sh
+./install-all.sh
 ```
 
-I-iinstall nito ang mga sumusunod:
-- React/Vite dependencies (Frontend)
-- Express/SQLite dependencies (Backend)
-- `xlsx`, `file-saver` (para sa Admin Exports)
-- `nodemailer`, `multer` (para sa Email at File Uploads)
-- `html2canvas` (ID Card Download)
-- `html5-qrcode` (QR Login Scanner)
+I-iinstall nito ang mga sumusunod para sa bawat subsystem:
+- React/Vite/Bootstrap/Lucide dependencies (Frontend)
+- Express/SQLite/Nodemailer/Sharp dependencies (Backend)
+- `exceljs`, `pdf-lib`, `pako` at iba pang utility libraries.
 
 ## 2. Database Initialization
 
-Gumagamit ang system ng local SQLite database (`db.sqlite`). Kailangan mo itong i-seed ng initial data (tables, admin user, etc.) bago patakbuhin ang app.
+Gumagamit ang system ng local SQLite database (`db.sqlite`). **Ang database ay awtomatikong nililikha at sinisi-seed sa unang pagtakbo ng application gamit ang `./run-all.sh`. Wala kang kailangang i-configure nang manu-mano.**
 
-I-run ang seed script (siguraduhing nasa loob ka ng `system` folder o gamitin ang tamang path):
-
-```bash
-cd system
-node backend/seed.js
-cd ..
-```
-
-O kaya:
+Kung nais mong i-reset o i-seed muli ang database nang manu-mano sa hinaharap, maaari mong patakbuhin ang sumusunod na command mula sa root:
 
 ```bash
 node system/backend/seed.js

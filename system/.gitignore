@@ -16,6 +16,15 @@ db.sqlite
 credentials.json
 token.json
 
+# Uploads
+uploads/documents/*
+!uploads/documents/.gitkeep
+uploads/avatars/*
+!uploads/avatars/.gitkeep
+!uploads/avatars/u-admin.jpg
+!uploads/avatars/u-stu-default.jpg
+!uploads/avatars/u-stu1.jpg
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -52,6 +52,11 @@ Patakbuhin ang install script para i-install ang lahat ng dependencies, pagkatap
     ./run-all.sh
     ```
 
+*Alternatibong paraan (Single Command):*
+```bash
+chmod +x run-all.sh && ./run-all.sh --clean
+```
+
 *   **Main Portal (Frontend):** http://localhost:3000
 *   **Excel/SF9 Card evolution (Frontend):** http://localhost:3002
 

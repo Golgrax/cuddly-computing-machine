@@ -38,24 +38,38 @@ Isang comprehensive na school management portal na dine-design para sa Sto. Niñ
 *   Node.js (v18 o mas mataas)
 *   npm
 
-### Installation (Quick Setup)
+### Mabilisang Simula (Quick Start)
 
-Run this command in your terminal to automatically clone, install, and start everything:
+Patakbuhin ang install script para i-install ang lahat ng dependencies, pagkatapos ay i-run ang start script (ang database ay awtomatikong masi-seed sa unang pagtakbo):
 
-```bash
-git clone https://github.com/Golgrax/cuddly-computing-machine.git && cd cuddly-computing-machine && chmod +x run-all.sh && ./run-all.sh --clean
-```
-
-### Manual Installation
-
-1.  I-clone ang repository.
-2.  Patakbuhin ang auto-installer:
+1.  **I-install ang lahat:**
     ```bash
-    ./run-all.sh --install
+    chmod +x install-all.sh run-all.sh
+    ./install-all.sh
+    ```
+2.  **Patakbuhin ang system:**
+    ```bash
+    ./run-all.sh
     ```
 
-*   **Frontend:** http://localhost:3000
-*   **Backend:** http://localhost:3001
+*Alternatibong paraan (Single Command):*
+```bash
+chmod +x run-all.sh && ./run-all.sh --clean
+```
+
+*   **Main Portal (Frontend):** http://localhost:3000
+*   **Excel/SF9 Card evolution (Frontend):** http://localhost:3002
+
+### 🗄️ Awtomatikong Seed at Sample Data (Auto-Seeded Sample Data)
+Ang database (`db.sqlite`) ay **awtomatikong nililikha at sinisi-seed** sa unang pagtakbo gamit ang default testing credentials. Hindi mo na kailangang mag-seed nang manu-mano.
+
+Narito ang mga default account na magagamit sa pag-test:
+
+| Papel (Role) | Email Address | Password | Paglalarawan (Description) |
+| :--- | :--- | :--- | :--- |
+| **System Admin** | `admin@gmail.com` | `123` | Buong pamamahala sa portal, facilities, at accounts. |
+| **Teacher** | `teacher@gmail.com` | `123` | Pamamahala ng advisory class, grade sheet, at announcements. |
+| **Student** | `student@gmail.com` | `123` | Pag-check ng grades (SF9), clearance, attendance, at download ng digital ID. |
 
 ## Mga Roles
 *   **Student:** Access sa personal academic records.

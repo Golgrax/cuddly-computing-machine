@@ -60,6 +60,17 @@ install_if_missing "system2" "$FORCE_INSTALL" || exit 1
 install_if_missing "system2/backend" "$FORCE_INSTALL" || exit 1
 echo "✅ [Setup] All systems verified."
 
+# --- DATABASE INITIALIZATION CHECK ---
+if [ ! -f "system/backend/db.sqlite" ]; then
+    echo "🗄️ [Setup] Database not found. Seeding initial database..."
+    node system/backend/seed.js
+    if [ $? -ne 0 ]; then
+        echo "❌ [Setup] Failed to seed database."
+        exit 1
+    fi
+    echo "✅ [Setup] Database initialized and seeded."
+fi
+
 # --- MAIN SYSTEM ---
 echo "[Main] Starting Backend (Port 3001)..."
 cd system/backend
@@ -76,7 +87,7 @@ cd ../..
 
 echo "[Main] Starting Frontend (Port 3000)..."
 cd system
-npm run dev -- --port 3000 --host > frontend.log 2>&1 &
+npm run dev -- --port 3000 --host 0.0.0.0 > frontend.log 2>&1 &
 MAIN_FRONTEND_PID=$!
 cd ..
 
@@ -104,7 +115,7 @@ cd ../..
 
 echo "[S2] Starting Frontend (Port 3002)..."
 cd system2
-npm run dev -- --port 3002 --host > frontend.log 2>&1 &
+npm run dev -- --port 3002 --host 0.0.0.0 > frontend.log 2>&1 &
 S2_FRONTEND_PID=$!
 cd ..
 

@@ -21,5 +21,11 @@ npm install --prefix system2 --no-audit --no-fund
 echo "📦 Step 6: Installing System 2 (Backend) dependencies..."
 npm install --prefix system2/backend --no-audit --no-fund
 
+# Seed database if not present
+if [ ! -f "system/backend/db.sqlite" ]; then
+    echo "🗄️ Database not found. Seeding initial database..."
+    node system/backend/seed.js
+fi
+
 echo "✅ ALL DEPENDENCIES INSTALLED SUCCESSFULLY!"
 echo "👉 You can now run: ./run-all.sh"
